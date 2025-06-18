@@ -23,10 +23,10 @@ namespace DnsClient
     {
         public abstract DnsMessageHandleType Type { get; }
 
-        public abstract DnsResponseMessage Query(IPEndPoint endpoint, DnsRequestMessage request, TimeSpan timeout);
+        public abstract DnsResponseMessage Query(IPEndPoint server, DnsRequestMessage request, TimeSpan timeout);
 
         public abstract Task<DnsResponseMessage> QueryAsync(
-            IPEndPoint endpoint,
+            IPEndPoint server,
             DnsRequestMessage request,
             CancellationToken cancellationToken);
 

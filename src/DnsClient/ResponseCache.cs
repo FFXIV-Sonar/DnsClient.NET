@@ -13,8 +13,6 @@ namespace DnsClient
 {
     internal class ResponseCache
     {
-        private static readonly TimeSpan s_infiniteTimeout = Timeout.InfiniteTimeSpan;
-
         // max is 24 days
         private static readonly TimeSpan s_maxTimeout = TimeSpan.FromMilliseconds(int.MaxValue);
 
@@ -22,7 +20,7 @@ namespace DnsClient
 
         private static readonly int s_cleanupInterval = (int)TimeSpan.FromMinutes(10).TotalMilliseconds;
         private readonly ConcurrentDictionary<string, ResponseEntry> _cache = new ConcurrentDictionary<string, ResponseEntry>();
-        private readonly object _cleanupLock = new object();
+        private readonly Lock _cleanupLock = new();
         private bool _cleanupRunning;
         private int _lastCleanup;
         private TimeSpan? _minimumTimeout;
@@ -31,19 +29,17 @@ namespace DnsClient
 
         public int Count => _cache.Count;
 
-        public bool Enabled { get; set; } = true;
+        public bool Enabled { get; set; }
 
         public TimeSpan? MinimumTimout
         {
             get { return _minimumTimeout; }
             set
             {
-                if (value.HasValue &&
-                    (value < TimeSpan.Zero || value > s_maxTimeout) && value != s_infiniteTimeout)
+                if (value is not null && (value < TimeSpan.Zero || value > s_maxTimeout) && value != Timeout.InfiniteTimeSpan)
                 {
                     throw new ArgumentOutOfRangeException(nameof(value));
                 }
-
                 _minimumTimeout = value;
             }
         }
@@ -53,12 +49,10 @@ namespace DnsClient
             get { return _maximumTimeout; }
             set
             {
-                if (value.HasValue &&
-                    (value < TimeSpan.Zero || value > s_maxTimeout) && value != s_infiniteTimeout)
+                if (value.HasValue && (value < TimeSpan.Zero || value > s_maxTimeout) && value != Timeout.InfiniteTimeSpan)
                 {
                     throw new ArgumentOutOfRangeException(nameof(value));
                 }
-
                 _maximumTimeout = value;
             }
         }
@@ -68,11 +62,10 @@ namespace DnsClient
             get { return _failureEntryTimeout; }
             set
             {
-                if ((value < TimeSpan.Zero || value > s_maxTimeout) && value != s_infiniteTimeout)
+                if ((value < TimeSpan.Zero || value > s_maxTimeout) && value != Timeout.InfiniteTimeSpan)
                 {
                     throw new ArgumentOutOfRangeException(nameof(value));
                 }
-
                 _failureEntryTimeout = value;
             }
         }
@@ -136,10 +129,7 @@ namespace DnsClient
 
         public bool Add(string key, IDnsQueryResponse response, bool cacheFailures = false)
         {
-            if (key == null)
-            {
-                throw new ArgumentNullException(key);
-            }
+            ArgumentNullException.ThrowIfNull(key);
 
             if (Enabled && response != null && (cacheFailures || (!response.HasError && response.Answers.Count > 0)))
             {
@@ -194,8 +184,6 @@ namespace DnsClient
 
         private static void DoCleanup(ResponseCache cache)
         {
-            cache._cleanupRunning = true;
-
             var now = DateTimeOffset.UtcNow;
             foreach (var entry in cache._cache)
             {
@@ -204,8 +192,7 @@ namespace DnsClient
                     cache._cache.TryRemove(entry.Key, out _);
                 }
             }
-
-            cache._cleanupRunning = false;
+            Volatile.Write(ref cache._cleanupRunning, false);
         }
 
         private void StartCleanup()

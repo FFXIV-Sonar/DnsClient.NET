@@ -599,26 +599,26 @@ namespace DnsClient.Tests
                     new TestMatrixItem("QueryReverseAsync(ip)", (client) => client.QueryReverseAsync(IPAddress.Any).GetAwaiter().GetResult()),
 
                     // by server
-                    new TestMatrixItem("QueryServer(s,n,t,c)", (client, servers) => client.QueryServer(servers, question.QueryName, question.QuestionType, question.QuestionClass)),
-                    new TestMatrixItem("QueryServer(s2,n,t,c)", (client, servers) => client.QueryServer(ToIPAddresses(servers), question.QueryName, question.QuestionType, question.QuestionClass)),
-                    new TestMatrixItem("QueryServer(s3,n,t,c)", (client, servers) => client.QueryServer(ToIPEndpoints(servers), question.QueryName, question.QuestionType, question.QuestionClass)),
-                    new TestMatrixItem("QueryServer(s,q)", (client, servers) => client.QueryServer(servers, question)),
-                    new TestMatrixItem("QueryServerAsync(s,n,t,c)", (client, servers) => client.QueryServerAsync(servers, question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerAsync(s2,n,t,c)", (client, servers) => client.QueryServerAsync(ToIPAddresses(servers), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerAsync(s3,n,t,c)", (client, servers) => client.QueryServerAsync(ToIPEndpoints(servers), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerAsync(s,q)", (client, servers) => client.QueryServerAsync(servers, question).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerReverse(s,ip)", (client, servers) => client.QueryServerReverse(servers, IPAddress.Any)),
-                    new TestMatrixItem("QueryServerReverse(s2,ip)", (client, servers) => client.QueryServerReverse(ToIPAddresses(servers), IPAddress.Any)),
-                    new TestMatrixItem("QueryServerReverse(s3,ip)", (client, servers) => client.QueryServerReverse(ToIPEndpoints(servers), IPAddress.Any)),
-                    new TestMatrixItem("QueryServerReverseAsync(s,ip)", (client, servers) => client.QueryServerReverseAsync(servers, IPAddress.Any).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerReverseAsync(s2,ip)", (client, servers) => client.QueryServerReverseAsync(ToIPAddresses(servers), IPAddress.Any).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerReverseAsync(s3,ip)", (client, servers) => client.QueryServerReverseAsync(ToIPEndpoints(servers), IPAddress.Any).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServer(s,n,t,c)", (client, servers) => client.QueryServer(servers.ToList(), question.QueryName, question.QuestionType, question.QuestionClass)),
+                    new TestMatrixItem("QueryServer(s2,n,t,c)", (client, servers) => client.QueryServer(ToIPAddresses(servers).ToList(), question.QueryName, question.QuestionType, question.QuestionClass)),
+                    new TestMatrixItem("QueryServer(s3,n,t,c)", (client, servers) => client.QueryServer(ToIPEndpoints(servers).ToList(), question.QueryName, question.QuestionType, question.QuestionClass)),
+                    new TestMatrixItem("QueryServer(s,q)", (client, servers) => client.QueryServer(servers.ToList(), question)),
+                    new TestMatrixItem("QueryServerAsync(s,n,t,c)", (client, servers) => client.QueryServerAsync(servers.ToList(), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerAsync(s2,n,t,c)", (client, servers) => client.QueryServerAsync(ToIPAddresses(servers).ToList(), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerAsync(s3,n,t,c)", (client, servers) => client.QueryServerAsync(ToIPEndpoints(servers).ToList(), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerAsync(s,q)", (client, servers) => client.QueryServerAsync(servers.ToList(), question).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerReverse(s,ip)", (client, servers) => client.QueryServerReverse(servers.ToList(), IPAddress.Any)),
+                    new TestMatrixItem("QueryServerReverse(s2,ip)", (client, servers) => client.QueryServerReverse(ToIPAddresses(servers).ToList(), IPAddress.Any)),
+                    new TestMatrixItem("QueryServerReverse(s3,ip)", (client, servers) => client.QueryServerReverse(ToIPEndpoints(servers).ToList(), IPAddress.Any)),
+                    new TestMatrixItem("QueryServerReverseAsync(s,ip)", (client, servers) => client.QueryServerReverseAsync(servers.ToList(), IPAddress.Any).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerReverseAsync(s2,ip)", (client, servers) => client.QueryServerReverseAsync(ToIPAddresses(servers).ToList(), IPAddress.Any).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerReverseAsync(s3,ip)", (client, servers) => client.QueryServerReverseAsync(ToIPEndpoints(servers).ToList(), IPAddress.Any).GetAwaiter().GetResult()),
 
                     // with servers and options
-                    new TestMatrixItem("Query(q,s,o)", (client, options, servers) => client.QueryServer(servers, question, options)),
-                    new TestMatrixItem("QueryAsync(q,s,o)", (client, options, servers) => client.QueryServerAsync(servers, question, options).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryReverse(ip,s,o)", (client, options, servers) => client.QueryServerReverse(servers, IPAddress.Any, options)),
-                    new TestMatrixItem("QueryReverseAsync(ip,s,o)", (client, options, servers) => client.QueryServerReverseAsync(servers, IPAddress.Any, options).GetAwaiter().GetResult()),
+                    new TestMatrixItem("Query(q,s,o)", (client, options, servers) => client.QueryServer(servers.ToList(), question, options)),
+                    new TestMatrixItem("QueryAsync(q,s,o)", (client, options, servers) => client.QueryServerAsync(servers.ToList(), question, options).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryReverse(ip,s,o)", (client, options, servers) => client.QueryServerReverse(servers.ToList(), IPAddress.Any, options)),
+                    new TestMatrixItem("QueryReverseAsync(ip,s,o)", (client, options, servers) => client.QueryServerReverseAsync(servers.ToList(), IPAddress.Any, options).GetAwaiter().GetResult()),
 
                     // with query options
                     new TestMatrixItem("Query(q,o)", (client, options) => client.Query(question, options)),
@@ -639,16 +639,16 @@ namespace DnsClient.Tests
         }
 
         public static TheoryData<TestMatrixItem> AllWithoutServerQueries
-            => new(All.SelectMany(p => p).OfType<TestMatrixItem>().Where(a => !a.UsesServers));
+            => new(All.OfType<TestMatrixItem>().Where(a => !a.UsesServers));
 
         public static TheoryData<TestMatrixItem> AllWithServers
-            => new(All.SelectMany(p => p).OfType<TestMatrixItem>().Where(a => a.UsesServers));
+            => new(All.OfType<TestMatrixItem>().Where(a => a.UsesServers));
 
         public static TheoryData<TestMatrixItem> AllWithQueryOptions
-            => new(All.SelectMany(p => p).OfType<TestMatrixItem>().Where(a => a.UsesQueryOptions));
+            => new(All.OfType<TestMatrixItem>().Where(a => a.UsesQueryOptions));
 
         public static TheoryData<TestMatrixItem> AllWithoutQueryOptionsOrServerQueries
-            => new(All.SelectMany(p => p).OfType<TestMatrixItem>().Where(a => (a.UsesQueryOptions || a.UsesServers)));
+            => new(All.OfType<TestMatrixItem>().Where(a => (a.UsesQueryOptions || a.UsesServers)));
 
         [Theory]
         [MemberData(nameof(AllWithoutServerQueries))]

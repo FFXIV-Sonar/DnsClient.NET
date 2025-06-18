@@ -188,7 +188,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="query"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        IDnsQueryResponse QueryServer(IReadOnlyCollection<NameServer> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN);
+        IDnsQueryResponse QueryServer(IReadOnlyList<NameServer> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN);
 
         /// <summary>
         /// Performs a DNS lookup for the given <paramref name="question" />
@@ -206,7 +206,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/> or <paramref name="question"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        IDnsQueryResponse QueryServer(IReadOnlyCollection<NameServer> servers, DnsQuestion question);
+        IDnsQueryResponse QueryServer(IReadOnlyList<NameServer> servers, DnsQuestion question);
 
         /// <summary>
         /// Performs a DNS lookup for the given <paramref name="question" />
@@ -225,7 +225,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/>, <paramref name="question"/> or <paramref name="queryOptions"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        IDnsQueryResponse QueryServer(IReadOnlyCollection<NameServer> servers, DnsQuestion question, DnsQueryOptions queryOptions);
+        IDnsQueryResponse QueryServer(IReadOnlyList<NameServer> servers, DnsQuestion question, DnsQueryOptions queryOptions);
 
         /// <summary>
         /// Performs a DNS lookup for the given <paramref name="query" />, <paramref name="queryType" /> and <paramref name="queryClass" />
@@ -245,7 +245,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="query"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        IDnsQueryResponse QueryServer(IReadOnlyCollection<IPEndPoint> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN);
+        IDnsQueryResponse QueryServer(IReadOnlyList<IPEndPoint> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN);
 
         /// <summary>
         /// Performs a DNS lookup for the given <paramref name="query" />, <paramref name="queryType" /> and <paramref name="queryClass" />
@@ -265,7 +265,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="query"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        IDnsQueryResponse QueryServer(IReadOnlyCollection<IPAddress> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN);
+        IDnsQueryResponse QueryServer(IReadOnlyList<IPAddress> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN);
 
         /// <summary>
         /// Performs a DNS lookup for the given <paramref name="query" />, <paramref name="queryType" /> and <paramref name="queryClass" />
@@ -287,7 +287,7 @@ namespace DnsClient
         /// <exception cref="ArgumentNullException">If <paramref name="query"/> is null.</exception>
         /// <exception cref="OperationCanceledException">If cancellation has been requested for the passed in <paramref name="cancellationToken"/>.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<NameServer> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default);
+        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyList<NameServer> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Performs a DNS lookup for the given <paramref name="question" />
@@ -306,7 +306,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/> or <paramref name="question"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<NameServer> servers, DnsQuestion question, CancellationToken cancellationToken = default);
+        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyList<NameServer> servers, DnsQuestion question, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Performs a DNS lookup for the given <paramref name="question" />
@@ -326,7 +326,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/>, <paramref name="question"/> or <paramref name="queryOptions"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<NameServer> servers, DnsQuestion question, DnsQueryOptions queryOptions, CancellationToken cancellationToken = default);
+        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyList<NameServer> servers, DnsQuestion question, DnsQueryOptions queryOptions, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Performs a DNS lookup for the given <paramref name="query" />, <paramref name="queryType" /> and <paramref name="queryClass" />
@@ -348,7 +348,7 @@ namespace DnsClient
         /// <exception cref="ArgumentNullException">If <paramref name="query"/> is null.</exception>
         /// <exception cref="OperationCanceledException">If cancellation has been requested for the passed in <paramref name="cancellationToken"/>.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<IPAddress> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default);
+        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyList<IPAddress> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Performs a DNS lookup for the given <paramref name="query" />, <paramref name="queryType" /> and <paramref name="queryClass" />
@@ -370,7 +370,7 @@ namespace DnsClient
         /// <exception cref="ArgumentNullException">If <paramref name="query"/> is null.</exception>
         /// <exception cref="OperationCanceledException">If cancellation has been requested for the passed in <paramref name="cancellationToken"/>.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<IPEndPoint> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default);
+        Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyList<IPEndPoint> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Does a reverse lookup for the <paramref name="ipAddress" />
@@ -384,7 +384,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/> or <paramref name="ipAddress"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        IDnsQueryResponse QueryServerReverse(IReadOnlyCollection<IPAddress> servers, IPAddress ipAddress);
+        IDnsQueryResponse QueryServerReverse(IReadOnlyList<IPAddress> servers, IPAddress ipAddress);
 
         /// <summary>
         /// Does a reverse lookup for the <paramref name="ipAddress" />
@@ -398,7 +398,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/> or <paramref name="ipAddress"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        IDnsQueryResponse QueryServerReverse(IReadOnlyCollection<IPEndPoint> servers, IPAddress ipAddress);
+        IDnsQueryResponse QueryServerReverse(IReadOnlyList<IPEndPoint> servers, IPAddress ipAddress);
 
         /// <summary>
         /// Does a reverse lookup for the <paramref name="ipAddress" />
@@ -412,7 +412,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/> or <paramref name="ipAddress"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        IDnsQueryResponse QueryServerReverse(IReadOnlyCollection<NameServer> servers, IPAddress ipAddress);
+        IDnsQueryResponse QueryServerReverse(IReadOnlyList<NameServer> servers, IPAddress ipAddress);
 
         /// <summary>
         /// Does a reverse lookup for the <paramref name="ipAddress" />
@@ -427,7 +427,7 @@ namespace DnsClient
         /// <exception cref="ArgumentOutOfRangeException">If the <paramref name="servers"/> collection doesn't contain any elements.</exception>
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/>, <paramref name="ipAddress"/> or <paramref name="queryOptions"/> is null.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        IDnsQueryResponse QueryServerReverse(IReadOnlyCollection<NameServer> servers, IPAddress ipAddress, DnsQueryOptions queryOptions);
+        IDnsQueryResponse QueryServerReverse(IReadOnlyList<NameServer> servers, IPAddress ipAddress, DnsQueryOptions queryOptions);
 
         /// <summary>
         /// Does a reverse lookup for the <paramref name="ipAddress" />
@@ -443,7 +443,7 @@ namespace DnsClient
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/> or <paramref name="ipAddress"/> is null.</exception>
         /// <exception cref="OperationCanceledException">If cancellation has been requested for the passed in <paramref name="cancellationToken"/>.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyCollection<IPAddress> servers, IPAddress ipAddress, CancellationToken cancellationToken = default);
+        Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyList<IPAddress> servers, IPAddress ipAddress, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Does a reverse lookup for the <paramref name="ipAddress" />
@@ -459,7 +459,7 @@ namespace DnsClient
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/> or <paramref name="ipAddress"/> is null.</exception>
         /// <exception cref="OperationCanceledException">If cancellation has been requested for the passed in <paramref name="cancellationToken"/>.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyCollection<IPEndPoint> servers, IPAddress ipAddress, CancellationToken cancellationToken = default);
+        Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyList<IPEndPoint> servers, IPAddress ipAddress, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Does a reverse lookup for the <paramref name="ipAddress" />
@@ -475,7 +475,7 @@ namespace DnsClient
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/> or <paramref name="ipAddress"/> is null.</exception>
         /// <exception cref="OperationCanceledException">If cancellation has been requested for the passed in <paramref name="cancellationToken"/>.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyCollection<NameServer> servers, IPAddress ipAddress, CancellationToken cancellationToken = default);
+        Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyList<NameServer> servers, IPAddress ipAddress, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Does a reverse lookup for the <paramref name="ipAddress" />
@@ -492,6 +492,6 @@ namespace DnsClient
         /// <exception cref="ArgumentNullException">If <paramref name="servers"/>, <paramref name="ipAddress"/> or <paramref name="queryOptions"/> is null.</exception>
         /// <exception cref="OperationCanceledException">If cancellation has been requested for the passed in <paramref name="cancellationToken"/>.</exception>
         /// <exception cref="DnsResponseException">After retries and fallbacks, if none of the servers were accessible, timed out or (if <see cref="DnsQueryOptions.ThrowDnsErrors"/> is enabled) returned error results.</exception>
-        Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyCollection<NameServer> servers, IPAddress ipAddress, DnsQueryOptions queryOptions, CancellationToken cancellationToken = default);
+        Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyList<NameServer> servers, IPAddress ipAddress, DnsQueryOptions queryOptions, CancellationToken cancellationToken = default);
     }
 }

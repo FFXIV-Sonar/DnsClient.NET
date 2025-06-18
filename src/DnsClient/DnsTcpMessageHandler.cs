@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -21,40 +22,16 @@ namespace DnsClient
 
         public override DnsResponseMessage Query(IPEndPoint server, DnsRequestMessage request, TimeSpan timeout)
         {
-            CancellationToken cancellationToken = default;
+            using var cts = timeout.TotalMilliseconds != Timeout.Infinite && timeout.TotalMilliseconds < int.MaxValue ? new CancellationTokenSource(timeout) : null;
+            var cancellationToken = cts?.Token ?? CancellationToken.None;
 
-            using var cts = timeout.TotalMilliseconds != Timeout.Infinite && timeout.TotalMilliseconds < int.MaxValue ?
-                new CancellationTokenSource(timeout) : null;
-
-            cancellationToken = cts?.Token ?? default;
-
-            ClientPool pool;
-            while (!_pools.TryGetValue(server, out pool))
-            {
-                _pools.TryAdd(server, new ClientPool(true, server));
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
+            var pool = _pools.GetOrAdd(server, server => new ClientPool(true, server));
             var entry = pool.GetNextClient();
-
-            using var cancelCallback = cancellationToken.Register(() =>
-            {
-                if (entry == null)
-                {
-                    return;
-                }
-
-                entry.DisposeClient();
-            });
-
             try
             {
                 var response = QueryInternal(entry.Client, request, cancellationToken);
                 ValidateResponse(request, response);
-
                 pool.Enqueue(entry);
-
                 return response;
             }
             catch (ObjectDisposedException)
@@ -75,33 +52,14 @@ namespace DnsClient
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            ClientPool pool;
-            while (!_pools.TryGetValue(server, out pool))
-            {
-                _pools.TryAdd(server, new ClientPool(true, server));
-            }
-
+            var pool = _pools.GetOrAdd(server, server => new ClientPool(true, server));
             var entry = await pool.GetNextClientAsync().ConfigureAwait(false);
-
-            using var cancelCallback = cancellationToken.Register(() =>
-            {
-                if (entry == null)
-                {
-                    return;
-                }
-
-                entry.DisposeClient();
-            });
-
             try
             {
                 var response = await QueryAsyncInternal(entry.Client, request, cancellationToken).ConfigureAwait(false);
-
                 cancellationToken.ThrowIfCancellationRequested();
                 ValidateResponse(request, response);
-
                 pool.Enqueue(entry);
-
                 return response;
             }
             catch
@@ -119,7 +77,6 @@ namespace DnsClient
 
             // use a pooled buffer to writer the data + the length of the data later into the first two bytes
             using var memory = new PooledBytes(DnsQueryOptions.MaximumBufferSize);
-
             using (var writer = new DnsDatagramWriter(new ArraySegment<byte>(memory.Buffer, 2, memory.Buffer.Length - 2)))
             {
                 GetRequestData(request, writer);
@@ -142,7 +99,6 @@ namespace DnsClient
 
             var responses = new List<DnsResponseMessage>();
             byte[] buffer = memory.Buffer;
-
             do
             {
                 int bytesReceivedForLen = 0, readForLen;
@@ -209,7 +165,6 @@ namespace DnsClient
 
             // use a pooled buffer to writer the data + the length of the data later into the first two bytes
             using var memory = new PooledBytes(DnsQueryOptions.MaximumBufferSize);
-
             using (var writer = new DnsDatagramWriter(new ArraySegment<byte>(memory.Buffer, 2, memory.Buffer.Length - 2)))
             {
                 GetRequestData(request, writer);
@@ -230,7 +185,6 @@ namespace DnsClient
             cancellationToken.ThrowIfCancellationRequested();
 
             var responses = new List<DnsResponseMessage>();
-
             do
             {
                 int length;
@@ -285,11 +239,11 @@ namespace DnsClient
             return DnsResponseMessage.Combine(responses);
         }
 
-        private class ClientPool : IDisposable
+        private sealed class ClientPool : IDisposable
         {
             private bool _disposedValue;
             private readonly bool _enablePool;
-            private ConcurrentQueue<ClientEntry> _clients = new ConcurrentQueue<ClientEntry>();
+            private ConcurrentQueue<ClientEntry> _clients = new();
             private readonly IPEndPoint _endpoint;
 
             public ClientPool(bool enablePool, IPEndPoint endpoint)
@@ -300,66 +254,32 @@ namespace DnsClient
 
             public ClientEntry GetNextClient()
             {
-                if (_disposedValue)
+                ObjectDisposedException.ThrowIf(_disposedValue, this);
+                if (!_enablePool || !TryDequeue(out var entry))
                 {
-                    throw new ObjectDisposedException(nameof(ClientPool));
-                }
-
-                ClientEntry entry = null;
-                if (_enablePool)
-                {
-                    while (entry == null && !TryDequeue(out entry))
-                    {
-                        entry = new ClientEntry(new TcpClient(_endpoint.AddressFamily) { LingerState = new LingerOption(true, 0) }, _endpoint);
-                        entry.Client.Connect(_endpoint.Address, _endpoint.Port);
-                    }
-                }
-                else
-                {
-                    entry = new ClientEntry(new TcpClient(_endpoint.AddressFamily), _endpoint);
+                    entry = new ClientEntry(new TcpClient(_endpoint.AddressFamily) { LingerState = new LingerOption(_enablePool, 0) }, _endpoint);
                     entry.Client.Connect(_endpoint.Address, _endpoint.Port);
                 }
-
+                Debug.Assert(entry is not null);
                 return entry;
             }
 
             public async Task<ClientEntry> GetNextClientAsync()
             {
-                if (_disposedValue)
+                ObjectDisposedException.ThrowIf(_disposedValue, this);
+                if (!_enablePool || !TryDequeue(out var entry))
                 {
-                    throw new ObjectDisposedException(nameof(ClientPool));
-                }
-
-                ClientEntry entry = null;
-                if (_enablePool)
-                {
-                    while (entry == null && !TryDequeue(out entry))
-                    {
-                        entry = new ClientEntry(new TcpClient(_endpoint.AddressFamily) { LingerState = new LingerOption(true, 0) }, _endpoint);
-                        await entry.Client.ConnectAsync(_endpoint.Address, _endpoint.Port).ConfigureAwait(false);
-                    }
-                }
-                else
-                {
-                    entry = new ClientEntry(new TcpClient(_endpoint.AddressFamily), _endpoint);
+                    entry = new ClientEntry(new TcpClient(_endpoint.AddressFamily) { LingerState = new LingerOption(_enablePool, 0) }, _endpoint);
                     await entry.Client.ConnectAsync(_endpoint.Address, _endpoint.Port).ConfigureAwait(false);
                 }
-
+                Debug.Assert(entry is not null);
                 return entry;
             }
 
             public void Enqueue(ClientEntry entry)
             {
-                if (_disposedValue)
-                {
-                    throw new ObjectDisposedException(nameof(ClientPool));
-                }
-
-                if (entry == null)
-                {
-                    throw new ArgumentNullException(nameof(entry));
-                }
-
+                ObjectDisposedException.ThrowIf(_disposedValue, this);
+                ArgumentNullException.ThrowIfNull(entry);
                 if (!entry.Client.Client.RemoteEndPoint.Equals(_endpoint))
                 {
                     throw new ArgumentException("Invalid endpoint.");
@@ -379,11 +299,7 @@ namespace DnsClient
 
             public bool TryDequeue(out ClientEntry entry)
             {
-                if (_disposedValue)
-                {
-                    throw new ObjectDisposedException(nameof(ClientPool));
-                }
-
+                ObjectDisposedException.ThrowIf(_disposedValue, this);
                 bool result;
                 while (result = _clients.TryDequeue(out entry))
                 {
@@ -397,25 +313,19 @@ namespace DnsClient
                         entry.DisposeClient();
                     }
                 }
-
                 return result;
             }
 
-            protected virtual void Dispose(bool disposing)
+            protected void Dispose(bool disposing)
             {
-                if (!_disposedValue)
+                if (Interlocked.CompareExchange(ref _disposedValue, true, false)) return;
+                if (disposing)
                 {
-                    if (disposing)
+                    foreach (var entry in _clients)
                     {
-                        foreach (var entry in _clients)
-                        {
-                            entry.DisposeClient();
-                        }
-
-                        _clients = new ConcurrentQueue<ClientEntry>();
+                        entry.DisposeClient();
                     }
-
-                    _disposedValue = true;
+                    _clients = new ConcurrentQueue<ClientEntry>();
                 }
             }
 

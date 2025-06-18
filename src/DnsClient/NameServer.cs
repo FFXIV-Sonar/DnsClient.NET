@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -257,12 +258,10 @@ namespace DnsClient
         /// <returns>
         /// The list of name servers.
         /// </returns>
-        public static IReadOnlyCollection<NameServer> ResolveNameServers(bool skipIPv6SiteLocal = true, bool fallbackToGooglePublicDns = true)
+        public static IReadOnlyList<NameServer> ResolveNameServers(bool skipIPv6SiteLocal = true, bool fallbackToGooglePublicDns = true)
         {
-            IReadOnlyCollection<NameServer> nameServers = Array.Empty<NameServer>();
-
+            IReadOnlyList<NameServer> nameServers = [];
             var exceptions = new List<Exception>();
-
             var logger = Logging.LoggerFactory?.CreateLogger("DnsClient.NameServer");
 
             logger?.LogDebug("Starting to resolve NameServers, skipIPv6SiteLocal:{0}.", skipIPv6SiteLocal);
@@ -310,7 +309,7 @@ namespace DnsClient
                         servers.Add(server);
                     }
 
-                    nameServers = servers;
+                    nameServers = servers.ToList();
                 }
             }
             catch (Exception ex)
@@ -321,11 +320,10 @@ namespace DnsClient
                 logger?.LogInformation(ex, "Resolving name servers from NRPT failed.");
             }
 
-            IReadOnlyCollection<NameServer> filtered = nameServers
-                .Where(p => (p.IPEndPoint.Address.AddressFamily == AddressFamily.InterNetwork
-                            || p.IPEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6)
-                    && (!p.IPEndPoint.Address.IsIPv6SiteLocal || !skipIPv6SiteLocal))
-                .ToArray();
+            IReadOnlyList<NameServer> filtered = nameServers
+                .Where(p => p.IPEndPoint.Address.AddressFamily is AddressFamily.InterNetwork or AddressFamily.InterNetworkV6)
+                .Where(p => !p.IPEndPoint.Address.IsIPv6SiteLocal || !skipIPv6SiteLocal)
+                .ToList();
 
             try
             {
@@ -346,13 +344,7 @@ namespace DnsClient
                 else if (fallbackToGooglePublicDns)
                 {
                     logger?.LogWarning("Could not resolve any NameServers, falling back to Google public servers.");
-                    return new NameServer[]
-                    {
-                        GooglePublicDns,
-                        GooglePublicDns2,
-                        GooglePublicDnsIPv6,
-                        GooglePublicDns2IPv6
-                    };
+                    return [GooglePublicDns, GooglePublicDns2, GooglePublicDnsIPv6, GooglePublicDns2IPv6];
                 }
             }
 
@@ -371,7 +363,7 @@ namespace DnsClient
         /// <returns>
         /// The list of name servers.
         /// </returns>
-        public static IReadOnlyCollection<NameServer> ResolveNameServersNative()
+        public static IReadOnlyList<NameServer> ResolveNameServersNative()
         {
             List<NameServer> addresses = new List<NameServer>();
 
@@ -419,19 +411,17 @@ namespace DnsClient
             return NameResolutionPolicy.Resolve();
         }
 
-        internal static IReadOnlyCollection<NameServer> ValidateNameServers(IReadOnlyCollection<NameServer> servers, ILogger logger = null)
+        internal static IReadOnlyList<NameServer> ValidateNameServers(IReadOnlyList<NameServer> servers, ILogger logger = null)
         {
             // Right now, I'm only checking for ANY address, but might be more validation rules at some point...
-            var validServers = servers.Where(p => !p.IPEndPoint.Address.Equals(IPAddress.Any) && !p.IPEndPoint.Address.Equals(IPAddress.IPv6Any)).ToArray();
+            var validServers = servers
+                .Where(p => !p.IPEndPoint.Address.Equals(IPAddress.Any))
+                .Where(p => !p.IPEndPoint.Address.Equals(IPAddress.IPv6Any)).ToArray();
 
             if (validServers.Length != servers.Count)
             {
                 logger?.LogWarning("Unsupported ANY address cannot be used as name server.");
-
-                if (validServers.Length == 0)
-                {
-                    throw new InvalidOperationException("Unsupported ANY address cannot be used as name server and no other servers are configured to fall back to.");
-                }
+                if (validServers.Length == 0) throw new InvalidOperationException("Unsupported ANY address cannot be used as name server and no other servers are configured to fall back to.");
             }
 
             return validServers;

@@ -27,13 +27,11 @@ namespace DnsClient
             DnsRequestMessage request,
             TimeSpan timeout)
         {
-#pragma warning disable CA2000 // Dispose objects before losing scope
-            Socket socket = new Socket(endpoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-#pragma warning restore CA2000 // Dispose objects before losing scope
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(MaxSize);
-
+            var buffer = ArrayPool<byte>.Shared.Rent(MaxSize);
             try
             {
+                using var socket = new Socket(endpoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+
                 // -1 indicates infinite
                 int timeoutInMillis = timeout.TotalMilliseconds >= int.MaxValue ? -1 : (int)timeout.TotalMilliseconds;
                 socket.ReceiveTimeout = timeoutInMillis;
@@ -54,11 +52,6 @@ namespace DnsClient
             finally
             {
                 ArrayPool<byte>.Shared.Return(buffer);
-                try
-                {
-                    socket.Dispose();
-                }
-                catch { }
             }
         }
 
@@ -68,25 +61,17 @@ namespace DnsClient
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-#pragma warning disable CA2000 // Dispose objects before losing scope
-            Socket socket = new Socket(endpoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-#pragma warning restore CA2000 // Dispose objects before losing scope
             byte[] buffer = ArrayPool<byte>.Shared.Rent(MaxSize);
             try
             {
-                using var callback = cancellationToken.Register(() =>
-                {
-                    socket.Dispose();
-                });
-
+                using var socket = new Socket(endpoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
                 using (var writer = new DnsDatagramWriter())
                 {
                     GetRequestData(request, writer);
-                    await socket.SendToAsync(writer.Data, endpoint).ConfigureAwait(false);
+                    await socket.SendToAsync(writer.Data, endpoint, cancellationToken).ConfigureAwait(false);
                 }
 
-                var result = await socket.ReceiveFromAsync(new ArraySegment<byte>(buffer), endpoint).ConfigureAwait(false);
+                var result = await socket.ReceiveFromAsync(new ArraySegment<byte>(buffer), endpoint, cancellationToken).ConfigureAwait(false);
                 var response = GetResponseMessage(new ArraySegment<byte>(buffer, 0, result.ReceivedBytes));
                 ValidateResponse(request, response);
                 return response;
@@ -103,11 +88,6 @@ namespace DnsClient
             finally
             {
                 ArrayPool<byte>.Shared.Return(buffer);
-                try
-                {
-                    socket.Dispose();
-                }
-                catch { }
             }
         }
     }
