@@ -1,3 +1,7 @@
+# Warning
+This fork is unsupported and modified my own purposes. No support will be provided and therefore you use this fork at your own risk.
+
+
 # DnsClient.NET
 
 [![Build Status](https://dev.azure.com/michaco/DnsClient/_apis/build/status/MichaCo.DnsClient.NET?branchName=dev&label=Build)](https://dev.azure.com/michaco/DnsClient/_build/latest?definitionId=1&branchName=dev)
