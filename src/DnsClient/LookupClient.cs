@@ -426,21 +426,12 @@ namespace DnsClient
         }
 
         private IDnsQueryResponse ResolveQuery(
-            IReadOnlyList<NameServer> servers,
+            IEnumerable<NameServer> servers,
             DnsQueryOptions settings,
             DnsMessageHandler handler,
             DnsRequestMessage request,
             LookupClientAudit audit = null)
         {
-            if (request == null)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-            if (handler == null)
-            {
-                throw new ArgumentNullException(nameof(handler));
-            }
-
             for (var serverIndex = 0; serverIndex < servers.Count; serverIndex++)
             {
                 var serverInfo = servers[serverIndex];
@@ -670,22 +661,13 @@ namespace DnsClient
         }
 
         private async Task<IDnsQueryResponse> ResolveQueryAsync(
-            IReadOnlyList<NameServer> servers,
+            IEnumerable<NameServer> servers,
             DnsQueryOptions settings,
             DnsMessageHandler handler,
             DnsRequestMessage request,
             LookupClientAudit audit = null,
             CancellationToken cancellationToken = default)
         {
-            if (handler == null)
-            {
-                throw new ArgumentNullException(nameof(handler));
-            }
-            if (request == null)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
             for (var serverIndex = 0; serverIndex < servers.Count; serverIndex++)
             {
                 var serverInfo = servers[serverIndex];
