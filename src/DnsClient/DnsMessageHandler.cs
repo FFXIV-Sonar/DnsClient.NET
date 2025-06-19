@@ -105,7 +105,7 @@ namespace DnsClient
             writer.WriteInt16NetworkOrder(0);
             writer.WriteInt16NetworkOrder(0);
 
-            if (request.QuerySettings.UseExtendedDns)
+            if (request.Options.UseExtendedDns)
             {
                 writer.WriteInt16NetworkOrder(1); // one additional for the Opt record.
             }
@@ -118,9 +118,9 @@ namespace DnsClient
             writer.WriteUInt16NetworkOrder((ushort)question.QuestionType);
             writer.WriteUInt16NetworkOrder((ushort)question.QuestionClass);
 
-            if (request.QuerySettings.UseExtendedDns)
+            if (request.Options.UseExtendedDns)
             {
-                var opt = new OptRecord(size: request.QuerySettings.ExtendedDnsBufferSize, doFlag: request.QuerySettings.RequestDnsSecRecords);
+                var opt = new OptRecord(size: request.Options.ExtendedDnsBufferSize, doFlag: request.Options.RequestDnsSecRecords);
 
                 writer.WriteHostName("");
                 writer.WriteUInt16NetworkOrder((ushort)opt.RecordType);

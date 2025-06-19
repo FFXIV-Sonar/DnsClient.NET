@@ -24,6 +24,6 @@ namespace DnsClient
         /// <summary>
         /// Gets the configured settings of the <see cref="ILookupClient"/> instance.
         /// </summary>
-        LookupClientSettings Settings { get; }
+        LookupClientOptions Options { get; }
     }
 }

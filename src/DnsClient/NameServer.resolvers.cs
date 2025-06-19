@@ -126,8 +126,7 @@ namespace DnsClient
         /// </returns>
         public static IEnumerable<NameServer> ResolveNameServers(bool skipIPv6SiteLocal = true, bool fallbackToPublicDns = true)
         {
-            NameServer[] fallback = fallbackToPublicDns ? [GooglePublicDns, GooglePublicDns2, GooglePublicDnsIPv6, GooglePublicDns2IPv6, CloudflarePublicDns, CloudflarePublicDns2, CloudflarePublicDnsIPv6, CloudflarePublicDns2IPv6] : [];
-            return ResolveNameServers(skipIPv6SiteLocal, fallback);
+            return ResolveNameServers(skipIPv6SiteLocal, fallbackToPublicDns ? (NameServer[])DefaultFallback : []);
         }
 
         /// <summary>

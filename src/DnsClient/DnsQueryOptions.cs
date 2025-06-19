@@ -192,6 +192,12 @@ namespace DnsClient
         public bool UseTcpOnly { get; init; }
 
         /// <summary>
+        /// Gets a flag indicating whether EDNS is enabled based on the values
+        /// of <see cref="ExtendedDnsBufferSize"/> and <see cref="RequestDnsSecRecords"/>.
+        /// </summary>
+        public bool UseExtendedDns => this.ExtendedDnsBufferSize > MinimumBufferSize || this.RequestDnsSecRecords;
+
+        /// <summary>
         /// Gets or sets the maximum buffer used for UDP requests.
         /// Defaults to <c>4096</c>.
         /// <para>

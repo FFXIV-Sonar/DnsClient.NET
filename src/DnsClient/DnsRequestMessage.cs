@@ -16,18 +16,20 @@ namespace DnsClient
 
         public DnsQuestion Question { get; }
 
-        public DnsQuerySettings QuerySettings { get; }
+        public DnsQueryOptions Options { get; }
 
-        public DnsRequestMessage(DnsRequestHeader header, DnsQuestion question, DnsQuerySettings dnsQuerySettings = null)
+        public DnsRequestMessage(DnsRequestHeader header, DnsQuestion question, DnsQueryOptions? options = null)
         {
-            Header = header ?? throw new ArgumentNullException(nameof(header));
-            Question = question ?? throw new ArgumentNullException(nameof(question));
-            QuerySettings = dnsQuerySettings ?? new DnsQuerySettings(new DnsQueryOptions());
+            ArgumentNullException.ThrowIfNull(header);
+            ArgumentNullException.ThrowIfNull(question);
+            this.Header = header;
+            this.Question = question;
+            this.Options = options ?? new();
         }
 
         public override string ToString()
         {
-            return $"{Header} => {Question}";
+            return $"{this.Header} => {this.Question}";
         }
     }
 }

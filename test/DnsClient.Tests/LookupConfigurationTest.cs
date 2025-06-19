@@ -328,25 +328,25 @@ namespace DnsClient.Tests
 
             // Not resolving or setting any servers => should be empty.
             Assert.Empty(client.NameServers);
-            Assert.Equal(!defaultOptions.ContinueOnDnsError, client.Settings.ContinueOnDnsError);
-            Assert.Equal(!defaultOptions.ContinueOnEmptyResponse, client.Settings.ContinueOnEmptyResponse);
-            Assert.Equal(!defaultOptions.EnableAuditTrail, client.Settings.EnableAuditTrail);
-            Assert.Equal(TimeSpan.FromMinutes(1), client.Settings.MinimumCacheTimeout);
-            Assert.Equal(TimeSpan.FromMinutes(42), client.Settings.MaximumCacheTimeout);
-            Assert.Equal(!defaultOptions.Recursion, client.Settings.Recursion);
-            Assert.Equal(defaultOptions.Retries * 2, client.Settings.Retries);
-            Assert.Equal(!defaultOptions.ThrowDnsErrors, client.Settings.ThrowDnsErrors);
-            Assert.Equal(TimeSpan.FromMinutes(10), client.Settings.Timeout);
-            Assert.Equal(!defaultOptions.UseCache, client.Settings.UseCache);
-            Assert.Equal(!defaultOptions.UseRandomNameServer, client.Settings.UseRandomNameServer);
-            Assert.Equal(!defaultOptions.UseTcpFallback, client.Settings.UseTcpFallback);
-            Assert.Equal(!defaultOptions.UseTcpOnly, client.Settings.UseTcpOnly);
-            Assert.Equal(1234, client.Settings.ExtendedDnsBufferSize);
-            Assert.Equal(!defaultOptions.RequestDnsSecRecords, client.Settings.RequestDnsSecRecords);
-            Assert.Equal(!defaultOptions.CacheFailedResults, client.Settings.CacheFailedResults);
-            Assert.Equal(TimeSpan.FromSeconds(10), client.Settings.FailedResultsCacheDuration);
+            Assert.Equal(!defaultOptions.ContinueOnDnsError, client.Options.ContinueOnDnsError);
+            Assert.Equal(!defaultOptions.ContinueOnEmptyResponse, client.Options.ContinueOnEmptyResponse);
+            Assert.Equal(!defaultOptions.EnableAuditTrail, client.Options.EnableAuditTrail);
+            Assert.Equal(TimeSpan.FromMinutes(1), client.Options.MinimumCacheTimeout);
+            Assert.Equal(TimeSpan.FromMinutes(42), client.Options.MaximumCacheTimeout);
+            Assert.Equal(!defaultOptions.Recursion, client.Options.Recursion);
+            Assert.Equal(defaultOptions.Retries * 2, client.Options.Retries);
+            Assert.Equal(!defaultOptions.ThrowDnsErrors, client.Options.ThrowDnsErrors);
+            Assert.Equal(TimeSpan.FromMinutes(10), client.Options.Timeout);
+            Assert.Equal(!defaultOptions.UseCache, client.Options.UseCache);
+            Assert.Equal(!defaultOptions.UseRandomNameServer, client.Options.UseRandomNameServer);
+            Assert.Equal(!defaultOptions.UseTcpFallback, client.Options.UseTcpFallback);
+            Assert.Equal(!defaultOptions.UseTcpOnly, client.Options.UseTcpOnly);
+            Assert.Equal(1234, client.Options.ExtendedDnsBufferSize);
+            Assert.Equal(!defaultOptions.RequestDnsSecRecords, client.Options.RequestDnsSecRecords);
+            Assert.Equal(!defaultOptions.CacheFailedResults, client.Options.CacheFailedResults);
+            Assert.Equal(TimeSpan.FromSeconds(10), client.Options.FailedResultsCacheDuration);
 
-            Assert.Equal(new LookupClientSettings(options), client.Settings);
+            Assert.Equal(new LookupClientSettings(options), client.Options);
         }
 
         [Fact]
@@ -697,7 +697,7 @@ namespace DnsClient.Tests
 
             Assert.Null(result.TestClient.TcpHandler.LastRequest);
             Assert.NotNull(result.TestClient.UdpHandler.LastRequest);
-            Assert.StrictEqual(new LookupClientSettings(unresolvedOptions), result.TestClient.Client.Settings);
+            Assert.StrictEqual(new LookupClientSettings(unresolvedOptions), result.TestClient.Client.Options);
 
             if (test.UsesQueryOptions && test.UsesServers)
             {
@@ -751,7 +751,7 @@ namespace DnsClient.Tests
             Assert.Null(result.TestClient.UdpHandler.LastRequest);
             Assert.Equal(NameServer.GooglePublicDns2IPv6, result.TestClient.TcpHandler.LastServer);
             Assert.Equal(NameServer.GooglePublicDns2IPv6, result.Response.NameServer);
-            Assert.Equal(new LookupClientSettings(defaultOptions), result.TestClient.Client.Settings);
+            Assert.Equal(new LookupClientSettings(defaultOptions), result.TestClient.Client.Options);
             Assert.Equal(new DnsQuerySettings(queryOptions), result.Response.Settings);
         }
 

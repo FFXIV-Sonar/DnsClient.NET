@@ -117,7 +117,7 @@ namespace DnsClient.Tests
 
             var mock = new Mock<IDnsQuery>();
             mock.Setup(p => p.QueryAsync(It.IsAny<string>(), It.IsAny<QueryType>(), It.IsAny<QueryClass>(), It.IsAny<CancellationToken>()))
-                .Returns(() => Task.FromResult<IDnsQueryResponse>(response.AsQueryResponse(ns, client.Settings)));
+                .Returns(() => Task.FromResult<IDnsQueryResponse>(response.AsQueryResponse(ns, client.Options)));
 
             var mockClient = mock.Object;
 
@@ -156,7 +156,7 @@ namespace DnsClient.Tests
 
             var mock = new Mock<IDnsQuery>();
             mock.Setup(p => p.QueryAsync(It.IsAny<string>(), It.IsAny<QueryType>(), It.IsAny<QueryClass>(), It.IsAny<CancellationToken>()))
-                .Returns(() => Task.FromResult<IDnsQueryResponse>(response.AsQueryResponse(ns, client.Settings)));
+                .Returns(() => Task.FromResult<IDnsQueryResponse>(response.AsQueryResponse(ns, client.Options)));
 
             var mockClient = mock.Object;
 

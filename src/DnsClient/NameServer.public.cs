@@ -9,6 +9,13 @@ namespace DnsClient
 {
     public partial class NameServer
     {
+        /// <summary>Default fallback nameservers.</summary>
+        public static readonly IEnumerable<NameServer> DefaultFallback = new NameServer[]
+        {
+            GooglePublicDns, GooglePublicDns2, GooglePublicDnsIPv6, GooglePublicDns2IPv6,
+            CloudflarePublicDns, CloudflarePublicDns2, CloudflarePublicDnsIPv6, CloudflarePublicDns2IPv6
+        };
+        
         /// <summary>A public Google DNS IPv4 nameserver.</summary>
         public static readonly NameServer GooglePublicDns = new IPEndPoint(IPAddress.Parse("8.8.4.4"), DefaultPort);
 

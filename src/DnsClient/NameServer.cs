@@ -2,7 +2,10 @@
 // Licensed under the Apache License, Version 2.0.
 // See LICENSE file for details.
 
+using DnsClient.Internal;
+using DnsClient.Windows;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -13,8 +16,6 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using DnsClient.Internal;
-using DnsClient.Windows;
 
 namespace DnsClient
 {
@@ -55,7 +56,7 @@ namespace DnsClient
         /// <exception cref="ArgumentNullException">If <paramref name="endPoint"/>is <c>null</c>.</exception>
         public NameServer(IPEndPoint endPoint)
         {
-            IPEndPoint = endPoint ?? throw new ArgumentNullException(nameof(endPoint));
+            this.IPEndPoint = endPoint ?? throw new ArgumentNullException(nameof(endPoint));
         }
 
         /// <summary>
@@ -157,11 +158,26 @@ namespace DnsClient
         /// </summary>
         public string? DnsSuffix { get; }
 
+        /// <summary>
+        /// Gets a value indicating this <see cref="NameServer"/> is valid.
+        /// </summary>
         public bool IsValid => !this.IPEndPoint.Address.Equals(IPAddress.Any) && !this.IPEndPoint.Address.Equals(IPAddress.IPv6Any);
 
-        internal static NameServer[]? Convert(IReadOnlyCollection<IPAddress> addresses) => addresses?.Select(p => (NameServer)p).ToArray();
+        /// <summary>
+        /// Convert <paramref name="addresses"/> into <see cref="NameServer"/>s.
+        /// </summary>
+        /// <param name="addresses">Addresses to convert.</param>
+        /// <returns><paramref name="addresses"/> converted to <see cref="NameServer"/>s.</returns>
+        [return: NotNullIfNotNull(nameof(addresses))]
+        public static IEnumerable<NameServer>? Convert(IEnumerable<IPAddress>? addresses) => addresses?.Select(p => (NameServer)p);
 
-        internal static NameServer[]? Convert(IReadOnlyCollection<IPEndPoint> addresses) => addresses?.Select(p => (NameServer)p).ToArray();
+        /// <summary>
+        /// Convert <paramref name="addresses"/> into <see cref="NameServer"/>s.
+        /// </summary>
+        /// <param name="addresses">Addresses to convert.</param>
+        /// <returns><paramref name="addresses"/> converted to <see cref="NameServer"/>s.</returns>
+        [return: NotNullIfNotNull(nameof(addresses))]
+        public static IEnumerable<NameServer>? Convert(IEnumerable<IPEndPoint>? addresses) => addresses?.Select(p => (NameServer)p);
 
         /// <summary>
         /// Returns a <see cref="string" /> that represents this instance.
