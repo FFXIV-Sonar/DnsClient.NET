@@ -208,7 +208,7 @@ namespace DnsClient
 
             if (options.AutoResolveNameServers)
             {
-                _resolvedNameServers = NameServer.ResolveNameServers(skipIPv6SiteLocal: true, fallbackToGooglePublicDns: false);
+                _resolvedNameServers = NameServer.ResolveNameServers(skipIPv6SiteLocal: true, fallbackToPublicDns: false);
                 servers = servers.Concat(_resolvedNameServers).ToArray();
 
                 // This will periodically get triggered on Query calls and
@@ -238,7 +238,7 @@ namespace DnsClient
         {
             try
             {
-                var newServers = NameServer.ResolveNameServers(skipIPv6SiteLocal: true, fallbackToGooglePublicDns: false);
+                var newServers = NameServer.ResolveNameServers(skipIPv6SiteLocal: true, fallbackToPublicDns: false);
 
                 if (newServers == null || newServers.Count == 0)
                 {

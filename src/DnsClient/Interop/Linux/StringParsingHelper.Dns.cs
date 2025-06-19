@@ -17,32 +17,28 @@ namespace DnsClient.Linux
     {
         internal static string ParseDnsSuffixFromResolvConfFile(string filePath)
         {
-            string data = File.ReadAllText(filePath);
-            RowConfigReader rcr = new RowConfigReader(data);
-
+            var data = File.ReadAllText(filePath);
+            var rcr = new RowConfigReader(data);
             return rcr.TryGetNextValue("search", out var dnsSuffix) ? dnsSuffix : string.Empty;
         }
 
-        internal static List<NameServer> ParseDnsAddressesFromResolvConfFile(string filePath)
+        internal static IEnumerable<NameServer> ParseDnsAddressesFromResolvConfFile(string filePath)
         {
             // Parse /etc/resolv.conf for all of the "nameserver" entries.
             // These are the DNS servers the machine is configured to use.
             // On OSX, this file is not directly used by most processes for DNS
             // queries/routing, but it is automatically generated instead, with
             // the machine's DNS servers listed in it.
-            string data = File.ReadAllText(filePath);
-            RowConfigReader rcr = new RowConfigReader(data);
-            List<NameServer> addresses = new List<NameServer>();
-
+            var data = File.ReadAllText(filePath);
+            var rcr = new RowConfigReader(data);
+            var dnsSuffix = new RowConfigReader(data).TryGetNextValue("search", out var dnsSuffix) ? dnsSuffix : null;
             while (rcr.TryGetNextValue("nameserver", out var addressString))
             {
-                if (IPAddress.TryParse(addressString, out IPAddress parsedAddress))
+                if (IPAddress.TryParse(addressString, out var address))
                 {
-                    addresses.Add(parsedAddress);
+                    yield return new(address, NameServer.DefaultPort, dnsSuffix);
                 }
             }
-
-            return addresses;
         }
     }
 }
