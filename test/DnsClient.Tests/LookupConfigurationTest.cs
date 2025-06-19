@@ -436,20 +436,22 @@ namespace DnsClient.Tests
         [Fact]
         public void LookupClientOptions_InvalidTimeout3()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.Timeout = TimeSpan.FromDays(25);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions()
+                {
+                    Timeout = TimeSpan.FromDays(25)
+                };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_MinimumCacheTimeout_ZeroIgnored()
         {
-            var options = new LookupClientOptions();
-
-            options.MinimumCacheTimeout = TimeSpan.Zero;
-
+            var options = new LookupClientOptions()
+            {
+                MinimumCacheTimeout = TimeSpan.Zero
+            };
             Assert.Null(options.MinimumCacheTimeout);
         }
 
@@ -458,11 +460,8 @@ namespace DnsClient.Tests
         {
             var options = new LookupClientOptions()
             {
-                MinimumCacheTimeout = TimeSpan.Zero
+                MinimumCacheTimeout = Timeout.InfiniteTimeSpan
             };
-
-            options.MinimumCacheTimeout = Timeout.InfiniteTimeSpan;
-
             Assert.Equal(Timeout.InfiniteTimeSpan, options.MinimumCacheTimeout);
         }
 
@@ -471,11 +470,8 @@ namespace DnsClient.Tests
         {
             var options = new LookupClientOptions()
             {
-                MinimumCacheTimeout = Timeout.InfiniteTimeSpan
+                MinimumCacheTimeout = null
             };
-
-            options.MinimumCacheTimeout = null;
-
             Assert.Null(options.MinimumCacheTimeout);
         }
 

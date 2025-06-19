@@ -72,7 +72,7 @@ namespace DnsClient
         /// <summary>
         /// Gets the readonly representation of this message which can be returned.
         /// </summary>
-        public DnsQueryResponse AsQueryResponse(NameServer nameServer, DnsQuerySettings settings)
+        public DnsQueryResponse AsQueryResponse(NameServer nameServer, DnsQueryOptions settings)
             => new DnsQueryResponse(this, nameServer, settings);
 
         public static DnsResponseMessage Combine(List<DnsResponseMessage> messages)

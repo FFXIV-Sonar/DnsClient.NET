@@ -19,9 +19,9 @@ namespace DnsClient
         private readonly StringBuilder _auditWriter = new StringBuilder();
         private Stopwatch _swatch;
 
-        public DnsQuerySettings Settings { get; }
+        public DnsQueryOptions Settings { get; }
 
-        public LookupClientAudit(DnsQuerySettings settings)
+        public LookupClientAudit(DnsQueryOptions settings)
         {
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }

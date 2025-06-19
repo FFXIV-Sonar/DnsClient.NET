@@ -371,23 +371,6 @@ namespace DnsClient
 
         private async Task<IDnsQueryResponse> QueryInternalAsync(DnsQuestion question, DnsQueryOptions queryOptions, IEnumerable<NameServer> servers, CancellationToken cancellationToken = default)
         {
-            if (servers == null)
-            {
-                throw new ArgumentNullException(nameof(servers));
-            }
-            if (question == null)
-            {
-                throw new ArgumentNullException(nameof(question));
-            }
-            if (queryOptions == null)
-            {
-                throw new ArgumentNullException(nameof(queryOptions));
-            }
-            if (servers.Count == 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name servers must not be empty.");
-            }
-
             var head = new DnsRequestHeader(queryOptions.Recursion, DnsOpCode.Query);
             var request = new DnsRequestMessage(head, question, queryOptions);
             var handler = queryOptions.UseTcpOnly ? _tcpFallbackHandler : _messageHandler;
@@ -1218,7 +1201,7 @@ namespace DnsClient
 
             if (request.Header.Id != response.Header.Id)
             {
-                _logger.LogWarning(
+                this._logger.LogWarning(
                     "Request header id {0} does not match response header {1}. This might be due to some non-standard configuration in your network.",
                     request.Header.Id,
                     response.Header.Id);
@@ -1246,7 +1229,7 @@ namespace DnsClient
                 }
             }
 
-            HandleOptRecords(settings, audit, nameServer, response);
+            this.HandleOptRecords(settings, audit, nameServer, response);
 
             var result = response.AsQueryResponse(nameServer, settings);
 
