@@ -31,7 +31,7 @@ namespace DnsClient.Linux
             // the machine's DNS servers listed in it.
             var data = File.ReadAllText(filePath);
             var rcr = new RowConfigReader(data);
-            var dnsSuffix = new RowConfigReader(data).TryGetNextValue("search", out var dnsSuffix) ? dnsSuffix : null;
+            var dnsSuffix = new RowConfigReader(data).TryGetNextValue("search", out var result) ? result : null;
             while (rcr.TryGetNextValue("nameserver", out var addressString))
             {
                 if (IPAddress.TryParse(addressString, out var address))
