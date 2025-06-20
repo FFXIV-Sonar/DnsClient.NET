@@ -82,7 +82,7 @@ namespace DnsClient
         /// </summary>
         /// <remarks>
         /// This uses <see cref="NameServer.ResolveNameServers(bool, bool)"/>.
-        /// The resulting list of name servers is highly dependent on the local network configuration and OS.
+        /// The resulting list of name nameServers is highly dependent on the local network configuration and OS.
         /// </remarks>
         /// <example>
         /// In the following example, we will create a new <see cref="LookupClient"/> without explicitly defining any DNS server.
@@ -123,7 +123,7 @@ namespace DnsClient
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="LookupClient"/> with default settings and the given name servers.
+        /// Creates a new instance of <see cref="LookupClient"/> with default settings and the given name nameServers.
         /// </summary>
         /// <param name="nameServers">The <see cref="NameServer"/>(s) to be used by this <see cref="LookupClient"/> instance.</param>
         /// <exception cref="ArgumentNullException">If <paramref name="nameServers"/>is <c>null</c>.</exception>
@@ -148,10 +148,13 @@ namespace DnsClient
             this._messageHandler = udpHandler ?? new DnsUdpMessageHandler();
             this._tcpFallbackHandler = tcpHandler ?? new DnsTcpMessageHandler();
 
+            this.Options = options;
+            this.Cache = new ResponseCache(true, options.MinimumCacheTimeout, options.MaximumCacheTimeout, options.FailedResultsCacheDuration);
+
             if (this._messageHandler.Type != DnsMessageHandleType.UDP) throw new ArgumentException("UDP message handler's type must be UDP.", nameof(udpHandler));
             if (this._tcpFallbackHandler.Type != DnsMessageHandleType.TCP) throw new ArgumentException("TCP message handler's type must be TCP.", nameof(tcpHandler));
 
-            // Setting up name servers.
+            // Setting up name nameServers.
             // Using manually configured ones and/or auto resolved ones.
             this.CheckNamneServers();
             this._skipper = new SkipWorker(
@@ -159,21 +162,18 @@ namespace DnsClient
             {
                 if (this._logger.IsEnabled(LogLevel.Debug))
                 {
-                    this._logger.LogDebug("Checking resolved name servers for network changes...");
+                    this._logger.LogDebug("Checking resolved name nameServers for network changes...");
                 }
                 this.CheckNamneServers();
             },
             skip: 60 * 1000);
-
-            this.Options = options;
-            this.Cache = new ResponseCache(true, options.MinimumCacheTimeout, options.MaximumCacheTimeout, options.FailedResultsCacheDuration);
         }
 
         private void CheckNamneServers()
         {
             try
             {
-                var newServers = this.Options.NameServers
+                var newServers = (this.Options.NameServers ?? [])
                     .Concat(this.Options.AutoResolveNameServers ? NameServer.ResolveNameServers(skipIPv6SiteLocal: true, fallbackToPublicDns: false) : [])
                     .Where(ns => ns.IsValid)
                     .Distinct().ToArray();
@@ -184,14 +184,14 @@ namespace DnsClient
                 }
                 else
                 {
-                    this._logger.LogDebug("Resolved name servers: {nameservers}", string.Join(", ", newServers.AsEnumerable()));
+                    this._logger.LogDebug("Resolved name nameServers: {0}", string.Join(", ", newServers.AsEnumerable()));
                     this._nameServers = newServers;
                 }
 
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Error trying to resolve name servers, keeping current configuration.");
+                this._logger.LogError(ex, "Error trying to resolve name nameServers, keeping current configuration.");
             }
         }
 
@@ -329,7 +329,7 @@ namespace DnsClient
         {
             if (!servers.Any())
             {
-                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name servers must not be empty.");
+                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name nameServers must not be empty.");
             }
 
             var head = new DnsRequestHeader(queryOptions.Recursion, DnsOpCode.Query);
@@ -413,12 +413,13 @@ namespace DnsClient
             DnsQueryOptions settings,
             DnsMessageHandler handler,
             DnsRequestMessage request,
-            LookupClientAudit audit = null)
+            LookupClientAudit? audit = null)
         {
-            for (var serverIndex = 0; serverIndex < servers.Count; serverIndex++)
+            var nameServers = ListUtils.GetOrCreateList(servers);
+            for (var serverIndex = 0; serverIndex < nameServers.Count; serverIndex++)
             {
-                var serverInfo = servers[serverIndex];
-                var isLastServer = serverIndex >= servers.Count - 1;
+                var serverInfo = nameServers[serverIndex];
+                var isLastServer = serverIndex >= nameServers.Count - 1;
 
                 if (serverIndex > 0)
                 {
@@ -480,7 +481,7 @@ namespace DnsClient
                             settings,
                             serverInfo,
                             handler.Type,
-                            servers.Count,
+                            nameServers.Count,
                             isLastServer,
                             out var retryQueryHint);
 
@@ -637,7 +638,7 @@ namespace DnsClient
             } // next server
 
             // 1.3.0: With the error handling, this should never be reached.
-            throw new DnsResponseException(DnsResponseCode.ConnectionTimeout, $"No connection could be established to any of the following name servers: {string.Join(", ", servers)}.")
+            throw new DnsResponseException(DnsResponseCode.ConnectionTimeout, $"No connection could be established to any of the following name nameServers: {string.Join(", ", nameServers)}.")
             {
                 AuditTrail = audit?.Build()
             };
@@ -651,10 +652,11 @@ namespace DnsClient
             LookupClientAudit audit = null,
             CancellationToken cancellationToken = default)
         {
-            for (var serverIndex = 0; serverIndex < servers.Count; serverIndex++)
+            var nameServers = ListUtils.GetOrCreateList(servers);
+            for (var serverIndex = 0; serverIndex < nameServers.Count; serverIndex++)
             {
-                var serverInfo = servers[serverIndex];
-                var isLastServer = serverIndex >= servers.Count - 1;
+                var serverInfo = nameServers[serverIndex];
+                var isLastServer = serverIndex >= nameServers.Count - 1;
 
                 if (serverIndex > 0)
                 {
@@ -746,7 +748,7 @@ namespace DnsClient
                             settings,
                             serverInfo,
                             handler.Type,
-                            servers.Count,
+                            nameServers.Count,
                             isLastServer,
                             out var retryQueryHint);
 
@@ -906,7 +908,7 @@ namespace DnsClient
             } // next server
 
             // 1.3.0: With the error handling, this should never be reached.
-            throw new DnsResponseException(DnsResponseCode.ConnectionTimeout, $"No connection could be established to any of the following name servers: {string.Join(", ", servers)}.")
+            throw new DnsResponseException(DnsResponseCode.ConnectionTimeout, $"No connection could be established to any of the following name nameServers: {string.Join(", ", nameServers)}.")
             {
                 AuditTrail = audit?.Build()
             };
@@ -1056,7 +1058,7 @@ namespace DnsClient
                 && (ex.ResponseData.Length <= DnsQueryOptions.MinimumBufferSize || ex.ReadLength + ex.Index > ex.ResponseData.Length))
             {
                 // lets assume the response was truncated and retry with TCP.
-                // (Not retrying other servers as it is very unlikely they would provide better results on this network)
+                // (Not retrying other nameServers as it is very unlikely they would provide better results on this network)
                 this._logger.LogError(
                     LogEventQueryBadTruncation,
                     ex,
@@ -1234,7 +1236,7 @@ namespace DnsClient
             var result = response.AsQueryResponse(nameServer, settings);
 
             // Set retry next server hint in case the question hasn't been answered.
-            // Only if there are more servers and the response doesn't have an error as that gets retried already per configuration.
+            // Only if there are more nameServers and the response doesn't have an error as that gets retried already per configuration.
             // Also, only do this if the setting is enabled.
             if (!result.HasError && !isLastServer && settings.ContinueOnEmptyResponse)
             {

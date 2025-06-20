@@ -296,7 +296,7 @@ namespace DnsClient
         /// <value>
         /// The audit trail.
         /// </value>
-        public string AuditTrail { get; internal set; }
+        public string? AuditTrail { get; internal set; }
 
         /// <summary>
         /// Gets a human readable error message.

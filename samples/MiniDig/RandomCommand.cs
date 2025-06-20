@@ -81,13 +81,10 @@ namespace DigApp
             _runSync = SyncArg.HasValue();
 
             _settings = GetLookupSettings();
-            _settings.EnableAuditTrail = false;
-            _settings.ThrowDnsErrors = false;
-            _settings.ContinueOnDnsError = false;
             _running = true;
 
             Console.WriteLine($"; <<>> Starting random run with {_clients} clients running for {_runtime} seconds <<>>");
-            Console.WriteLine($"; ({_settings.NameServers.Count} Servers, caching:{_settings.UseCache}, minttl:{_settings.MinimumCacheTimeout?.TotalMilliseconds})");
+            Console.WriteLine($"; ({_settings.NameServers.Count()} Servers, caching:{_settings.UseCache}, minttl:{_settings.MinimumCacheTimeout?.TotalMilliseconds})");
             _spinner = new Spiner();
             _spinner.Start();
 

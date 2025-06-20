@@ -74,10 +74,7 @@ namespace DnsClient
         /// </summary>
         public static string ParseString(byte[] data)
         {
-            if (data is null)
-            {
-                throw new ArgumentNullException(nameof(data));
-            }
+            ArgumentNullException.ThrowIfNull(data);
 
             var builder = StringBuilderObjectPool.Default.Get();
 

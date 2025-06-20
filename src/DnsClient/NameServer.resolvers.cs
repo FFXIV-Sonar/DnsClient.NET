@@ -102,7 +102,7 @@ namespace DnsClient
                     var logLevel = fallback.Length is 0 ? LogLevel.Error : LogLevel.Warning;
                     for (var index = 0; index < exceptions.Count; index++)
                     {
-                        logger.Log(logLevel, exceptions[index], "Exception #{index}/{count}", index + 1, exceptions.Count);
+                        logger.Log(logLevel, exceptions[index], "Exception #{0}/{1}", index + 1, exceptions.Count);
                     }
                 }
             }

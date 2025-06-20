@@ -90,7 +90,7 @@ namespace DigApp
             }
         }
 
-        public LookupClientOptions GetLookupSettings()
+        public LookupClientOptions GetLookupSettings(bool enableAuditTrail = false, bool throwOnDnsError = false, bool continueOnDnsError = true)
         {
             return new LookupClientOptions(GetEndpointsValue())
             {
@@ -103,7 +103,11 @@ namespace DigApp
                 UseTcpFallback = !GetNoTcp(),
                 MaximumCacheTimeout = GetMaximumTTL(),
                 ExtendedDnsBufferSize = GetMaximumBufferSize(),
-                RequestDnsSecRecords = GetRequestDnsSec()
+                RequestDnsSecRecords = GetRequestDnsSec(),
+
+                EnableAuditTrail = enableAuditTrail,
+                ThrowDnsErrors = throwOnDnsError,
+                ContinueOnDnsError = continueOnDnsError,
             };
         }
 
