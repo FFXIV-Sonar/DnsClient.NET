@@ -39,15 +39,8 @@ namespace DnsClient.Internal
         /// <returns>An array of 8-bit unsigned integers that is equivalent to <paramref name="input"/>.</returns>
         public static byte[] FromBase32HexString(string input)
         {
-            if (input == null)
-            {
-                throw new ArgumentNullException(nameof(input));
-            }
-
-            if (input.Length == 0)
-            {
-                return new byte[0];
-            }
+            ArgumentNullException.ThrowIfNull(input);
+            if (input.Length is 0) return [];
 
             input = input.TrimEnd('=');
             var byteCount = input.Length * 5 / 8;
@@ -91,15 +84,8 @@ namespace DnsClient.Internal
         /// <returns>The string representation in base 32 hex of <paramref name="input"/>.</returns>
         public static string ToBase32HexString(byte[] input)
         {
-            if (input == null)
-            {
-                throw new ArgumentNullException(nameof(input));
-            }
-
-            if (input.Length == 0)
-            {
-                return string.Empty;
-            }
+            ArgumentNullException.ThrowIfNull(input);
+            if (input.Length is 0) return string.Empty;
 
             var charCount = (int)Math.Ceiling(input.Length / 5d) * 8;
             var result = new char[charCount];
