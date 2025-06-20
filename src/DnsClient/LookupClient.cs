@@ -69,7 +69,7 @@ namespace DnsClient
         private NameServer[] _nameServers = [];
 
         /// <inheritdoc/>
-        public IEnumerable<NameServer> NameServers => this.Options.NameServers;
+        public IEnumerable<NameServer> NameServers => this._nameServers;
 
         /// <inheritdoc/>
         public LookupClientOptions Options { get; private set; }
@@ -231,7 +231,7 @@ namespace DnsClient
 
         /// <inheritdoc/>
         public IDnsQueryResponse Query(DnsQuestion question, DnsQueryAndServerOptions queryOptions)
-            => this.QueryInternal(question, this.Options, this.ShuffleNameServers());
+            => this.QueryInternal(question, queryOptions, this.ShuffleNameServers());
 
         /// <inheritdoc/>
         public IDnsQueryResponse QueryCache(string query, QueryType queryType, QueryClass queryClass = QueryClass.IN)

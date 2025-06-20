@@ -34,7 +34,7 @@ namespace DnsClient
             {
                 var meta = new List<string>() { $"skipIPv6SiteLocal: {skipIPv6SiteLocal}" };
                 if (fallback.Length > 0) meta.Add($"fallback: [{string.Join(", ", fallback.AsEnumerable())}]");
-                logger.LogDebug("Starting to resolve name servers ({meta})", string.Join(" | ", meta));
+                logger.LogDebug("Starting to resolve name servers ({0})", string.Join(" | ", meta));
             }
 
             try

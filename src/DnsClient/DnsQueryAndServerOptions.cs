@@ -12,7 +12,7 @@ namespace DnsClient
     /// </summary>
     public class DnsQueryAndServerOptions : DnsQueryOptions
     {
-        internal readonly NameServer[] _nameServers;
+        internal readonly NameServer[] _nameServers = [];
 
         /// <summary>
         /// Creates a new instance of <see cref="DnsQueryAndServerOptions"/> without name servers.
