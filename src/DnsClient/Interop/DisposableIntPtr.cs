@@ -11,8 +11,7 @@ namespace DnsClient
     internal sealed class DisposableIntPtr : IDisposable
     {
         private nint _ptr;
-
-        public nint Ptr { get; }
+        public nint Ptr => this._ptr;
         public bool IsValid { get; private set; } = true;
 
         private DisposableIntPtr()
