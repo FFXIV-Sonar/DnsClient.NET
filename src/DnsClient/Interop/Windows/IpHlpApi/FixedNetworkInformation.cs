@@ -30,51 +30,49 @@ namespace DnsClient.Windows.IpHlpApi
 
             while (result == Interop.IpHlpApi.ERROR_BUFFER_OVERFLOW)
             {
-                using (var buffer = DisposableIntPtr.Alloc((int)size))
+                using var buffer = DisposableIntPtr.Alloc(size);
+                if (buffer.IsValid)
                 {
-                    if (buffer.IsValid)
+                    result = Interop.IpHlpApi.GetNetworkParams(buffer.Ptr, ref size);
+
+                    Interop.IpHlpApi.FIXED_INFO fixedInfo;
+                    if (result == Interop.IpHlpApi.ERROR_SUCCESS)
                     {
-                        result = Interop.IpHlpApi.GetNetworkParams(buffer.Ptr, ref size);
-
-                        Interop.IpHlpApi.FIXED_INFO fixedInfo;
-                        if (result == Interop.IpHlpApi.ERROR_SUCCESS)
-                        {
-                            fixedInfo = Marshal.PtrToStructure<Interop.IpHlpApi.FIXED_INFO>(buffer.Ptr);
-                        }
-                        else
-                        {
-                            throw new Win32Exception((int)result);
-                        }
-
-                        var dnsAddresses = new List<IPAddress>();
-                        Interop.IpHlpApi.IP_ADDR_STRING addr = fixedInfo.DnsServerList;
-
-                        if (IPAddress.TryParse(addr.IpAddress, out IPAddress ip))
-                        {
-                            dnsAddresses.Add(ip);
-
-                            while (addr.Next != IntPtr.Zero)
-                            {
-                                addr = Marshal.PtrToStructure<Interop.IpHlpApi.IP_ADDR_STRING>(addr.Next);
-                                if (IPAddress.TryParse(addr.IpAddress, out ip))
-                                {
-                                    dnsAddresses.Add(ip);
-                                }
-                            }
-                        }
-
-                        info.HostName = fixedInfo.hostName;
-                        info.DomainName = fixedInfo.domainName;
-                        info.DnsAddresses = dnsAddresses.ToArray();
-
-                        return info;
+                        fixedInfo = Marshal.PtrToStructure<Interop.IpHlpApi.FIXED_INFO>(buffer.Ptr);
                     }
                     else
                     {
-#pragma warning disable CA2201 // Do not raise reserved exception types
-                        throw new OutOfMemoryException();
-#pragma warning restore CA2201 // Do not raise reserved exception types
+                        throw new Win32Exception((int)result);
                     }
+
+                    var dnsAddresses = new List<IPAddress>();
+                    Interop.IpHlpApi.IP_ADDR_STRING addr = fixedInfo.DnsServerList;
+
+                    if (IPAddress.TryParse(addr.IpAddress, out var ip))
+                    {
+                        dnsAddresses.Add(ip);
+
+                        while (addr.Next != IntPtr.Zero)
+                        {
+                            addr = Marshal.PtrToStructure<Interop.IpHlpApi.IP_ADDR_STRING>(addr.Next);
+                            if (IPAddress.TryParse(addr.IpAddress, out ip))
+                            {
+                                dnsAddresses.Add(ip);
+                            }
+                        }
+                    }
+
+                    info.HostName = fixedInfo.hostName;
+                    info.DomainName = fixedInfo.domainName;
+                    info.DnsAddresses = dnsAddresses;
+
+                    return info;
+                }
+                else
+                {
+#pragma warning disable CA2201 // Do not raise reserved exception types
+                    throw new OutOfMemoryException();
+#pragma warning restore CA2201 // Do not raise reserved exception types
                 }
             }
 

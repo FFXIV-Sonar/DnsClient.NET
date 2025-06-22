@@ -33,7 +33,7 @@ namespace DnsClient
 
         public NameServer NameServer => throw new NotImplementedException();
 
-        public DnsQuerySettings Settings => throw new NotImplementedException();
+        public DnsQueryOptions Settings => throw new NotImplementedException();
     }
 
     /// <summary>
@@ -119,23 +119,18 @@ namespace DnsClient
         /// <summary>
         /// Gets the settings used to produce this response.
         /// </summary>
-        public DnsQuerySettings Settings { get; }
+        public DnsQueryOptions Settings { get; }
 
-        internal DnsQueryResponse(DnsResponseMessage dnsResponseMessage, NameServer nameServer, DnsQuerySettings settings)
+        internal DnsQueryResponse(DnsResponseMessage dnsResponseMessage, NameServer nameServer, DnsQueryOptions settings)
         {
-            if (dnsResponseMessage == null)
-            {
-                throw new ArgumentNullException(nameof(dnsResponseMessage));
-            }
-
-            Header = dnsResponseMessage.Header;
-            MessageSize = dnsResponseMessage.MessageSize;
-            Questions = dnsResponseMessage.Questions.ToArray();
-            Answers = dnsResponseMessage.Answers.ToArray();
-            Additionals = dnsResponseMessage.Additionals.ToArray();
-            Authorities = dnsResponseMessage.Authorities.ToArray();
-            NameServer = nameServer ?? throw new ArgumentNullException(nameof(nameServer));
-            Settings = settings;
+            this.Header = dnsResponseMessage.Header;
+            this.MessageSize = dnsResponseMessage.MessageSize;
+            this.Questions = dnsResponseMessage.Questions.ToArray();
+            this.Answers = dnsResponseMessage.Answers.ToArray();
+            this.Additionals = dnsResponseMessage.Additionals.ToArray();
+            this.Authorities = dnsResponseMessage.Authorities.ToArray();
+            this.NameServer = nameServer ?? throw new ArgumentNullException(nameof(nameServer));
+            this.Settings = settings;
         }
 
         /// <inheritdoc />

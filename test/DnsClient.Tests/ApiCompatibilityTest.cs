@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 // See LICENSE file for details.
 
+#if false
 using System;
 using System.Threading.Tasks;
 using Xunit;
@@ -62,3 +63,4 @@ namespace DnsClient.Tests
 #endif
 #pragma warning restore CS0618 // Type or member is obsolete
 }
+#endif

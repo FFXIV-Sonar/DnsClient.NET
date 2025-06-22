@@ -110,8 +110,7 @@ namespace DigApp
             try
             {
                 // finally running the command
-                var options = GetLookupSettings();
-                options.EnableAuditTrail = true;
+                var options = GetLookupSettings(continueOnDnsError: true);
                 var lookup = GetDnsLookup(options);
 
                 Console.WriteLine($"; Servers: {string.Join(", ", lookup.NameServers)}");

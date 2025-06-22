@@ -226,6 +226,19 @@ namespace DnsClient
         TLSA = ResourceRecordType.TLSA,
 
         /// <summary>
+        /// TLSA rfc7344.
+        /// </summary>
+        /// <seealso href="https://https://tools.ietf.org/html/rfc7344">RFC 7344</seealso>
+        CDS = ResourceRecordType.CDS,
+
+        /// <summary>
+        /// TLSA rfc7344.
+        /// </summary>
+        /// <seealso href="https://https://tools.ietf.org/html/rfc7344">RFC 7344</seealso>
+        CDNS = ResourceRecordType.CDNS,
+
+
+        /// <summary>
         /// SPF records don't officially have a dedicated RR type, <see cref="ResourceRecordType.TXT"/> should be used instead.
         /// The behavior of TXT and SPF are the same.
         /// </summary>

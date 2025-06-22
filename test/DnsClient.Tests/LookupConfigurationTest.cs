@@ -20,129 +20,38 @@ namespace DnsClient.Tests
             Tracing.Source.Switch.Level = System.Diagnostics.SourceLevels.All;
         }
 
-        [Fact]
-        public void DnsQueryOptions_Implicit_Null()
-        {
-            Assert.Null((DnsQuerySettings)(DnsQueryOptions)null);
-        }
-
-        [Fact]
-        public void DnsQueryAndServerOptions_Implicit_Null()
-        {
-            Assert.Null((DnsQueryAndServerSettings)(DnsQueryAndServerOptions)null);
-        }
-
-        [Fact]
-        public void LookupClientOptions_Implicit_Null()
-        {
-            Assert.Null((LookupClientSettings)(LookupClientOptions)null);
-        }
-
-        [Fact]
-        public void DnsQuerySettings_Equals_Ref()
-        {
-            var opt = (DnsQuerySettings)new DnsQueryOptions();
-
-            // typed overload
-            Assert.True(opt.Equals(opt));
-
-            // object overload
-            Assert.True(opt.Equals((object)opt));
-        }
-
-        [Fact]
-        public void DnsQuerySettings_Equals_Null()
-        {
-            var opt = (DnsQuerySettings)new DnsQueryOptions();
-
-            // typed overload
-            Assert.False(opt.Equals(null));
-
-            // object overload
-            Assert.False(opt.Equals((object)null));
-        }
-
+        /*
         [Fact]
         public void DnsQuerySettings_Equals_Other()
         {
-            var opt = (DnsQuerySettings)new DnsQueryOptions();
-            var opt2 = (DnsQuerySettings)new DnsQueryOptions();
+            var opt = new DnsQueryOptions();
+            var opt2 = new DnsQueryOptions();
 
             // typed overload
             Assert.True(opt.Equals(opt2));
 
             // object overload
             Assert.True(opt.Equals((object)opt2));
-        }
-
-        [Fact]
-        public void DnsQueryAndServerSettings_Equals_Ref()
-        {
-            var opt = (DnsQueryAndServerSettings)new DnsQueryAndServerOptions();
-
-            // typed overload
-            Assert.True(opt.Equals(opt));
-
-            // object overload
-            Assert.True(opt.Equals((object)opt));
-        }
-
-        [Fact]
-        public void DnsQueryAndServerSettings_Equals_Null()
-        {
-            var opt = (DnsQueryAndServerSettings)new DnsQueryAndServerOptions();
-
-            // typed overload
-            Assert.False(opt.Equals(null));
-
-            // object overload
-            Assert.False(opt.Equals((object)null));
         }
 
         [Fact]
         public void DnsQueryAndServerSettings_Equals_Other()
         {
-            var opt = (DnsQueryAndServerSettings)new DnsQueryAndServerOptions();
-            var opt2 = (DnsQueryAndServerSettings)new DnsQueryAndServerOptions();
+            var opt = new DnsQueryAndServerOptions();
+            var opt2 = new DnsQueryAndServerOptions();
 
             // typed overload
             Assert.True(opt.Equals(opt2));
 
             // object overload
             Assert.True(opt.Equals((object)opt2));
-        }
-
-        [Fact]
-        public void LookupClientSettings_Equals_Ref()
-        {
-            var opt = new LookupClientSettings(new LookupClientOptions() { AutoResolveNameServers = false });
-
-            // typed overload
-            Assert.True(opt.Equals(opt));
-
-            // object overload
-            Assert.True(opt.Equals((object)opt));
-        }
-
-        [Fact]
-        public void LookupClientSettings_Equals_Null()
-        {
-            var opt = new LookupClientSettings(new LookupClientOptions() { AutoResolveNameServers = false });
-
-#pragma warning disable CA1508 // Avoid dead conditional code, testing custom Equals impl
-            // typed overload
-            Assert.False(opt.Equals(null));
-
-            // object overload
-            Assert.False(opt.Equals((object)null));
-#pragma warning restore CA1508 // Avoid dead conditional code
         }
 
         [Fact]
         public void LookupClientSettings_Equals_Other()
         {
-            var opt = new LookupClientSettings(new LookupClientOptions() { AutoResolveNameServers = false });
-            var opt2 = new LookupClientSettings(new LookupClientOptions() { AutoResolveNameServers = false });
+            var opt = new LookupClientOptions();
+            var opt2 = new LookupClientOptions();
 
             // typed overload
             Assert.True(opt.Equals(opt2));
@@ -150,44 +59,21 @@ namespace DnsClient.Tests
             // object overload
             Assert.True(opt.Equals((object)opt2));
         }
-
-        [Fact]
-        public void DnsQueryAndServerSettings_Null1()
-        {
-            Assert.ThrowsAny<ArgumentNullException>(() => new DnsQueryAndServerSettings(null));
-        }
-
-        [Fact]
-        public void DnsQueryAndServerSettings_Null2()
-        {
-            Assert.ThrowsAny<ArgumentNullException>(() => new DnsQueryAndServerSettings(new DnsQueryAndServerOptions(), null));
-        }
+        */
 
         [Fact]
         public void DnsQueryAndServerSettings_ChangeServers()
         {
-            var settings = new DnsQueryAndServerSettings(new DnsQueryAndServerOptions(NameServer.Cloudflare2), new NameServer[] { NameServer.Cloudflare });
+            var settings = new DnsQueryAndServerOptions(NameServer.CloudflarePublicDns);
 
             Assert.Single(settings.NameServers);
-            Assert.Contains(NameServer.Cloudflare, settings.NameServers);
+            Assert.Contains(NameServer.CloudflarePublicDns, settings.NameServers);
         }
 
         [Fact]
-        public void DnsQueryAndServerSettings_NullServers1()
+        public void DnsQueryAndServerSettings_NullServers()
         {
-            Assert.ThrowsAny<ArgumentNullException>(() => new DnsQueryAndServerSettings(new DnsQueryAndServerOptions((IPAddress[])null)));
-        }
-
-        [Fact]
-        public void DnsQueryAndServerSettings_NullServers2()
-        {
-            Assert.ThrowsAny<ArgumentNullException>(() => new DnsQueryAndServerSettings(new DnsQueryAndServerOptions((IPEndPoint[])null)));
-        }
-
-        [Fact]
-        public void DnsQueryAndServerSettings_NullServers3()
-        {
-            Assert.ThrowsAny<ArgumentNullException>(() => new DnsQueryAndServerSettings(new DnsQueryAndServerOptions((NameServer[])null)));
+            Assert.ThrowsAny<ArgumentNullException>(() => new DnsQueryAndServerOptions((NameServer[])null));
         }
 
         public static TheoryData<LookupClientOptions> AllNonDefaultConfigurations
@@ -207,18 +93,18 @@ namespace DnsClient.Tests
                 new LookupClientOptions { AutoResolveNameServers = false, UseRandomNameServer = false },
                 new LookupClientOptions { AutoResolveNameServers = false, UseTcpFallback = false },
                 new LookupClientOptions { AutoResolveNameServers = false, UseTcpOnly = true },
-                new LookupClientOptions(NameServer.CloudflareIPv6),
+                new LookupClientOptions(NameServer.CloudflarePublicDns2),
                 new LookupClientOptions(IPAddress.Loopback),
                 new LookupClientOptions(new IPEndPoint(IPAddress.Loopback, 1111)),
-                new LookupClientOptions(new[] { NameServer.CloudflareIPv6 }));
+                new LookupClientOptions(NameServer.CloudflarePublicDnsIPv6));
         }
 
         [Theory]
         [MemberData(nameof(AllNonDefaultConfigurations))]
         public void LookupClientSettings_NotEqual(LookupClientOptions otherOptions)
         {
-            var opt = new LookupClientSettings(new LookupClientOptions() { AutoResolveNameServers = false });
-            var opt2 = new LookupClientSettings(otherOptions);
+            var opt = new LookupClientOptions() { AutoResolveNameServers = false };
+            var opt2 = otherOptions;
 
             Assert.NotStrictEqual(opt, opt2);
 
@@ -227,22 +113,6 @@ namespace DnsClient.Tests
 
             // object overload
             Assert.False(opt.Equals((object)opt2));
-        }
-
-        [Theory]
-        [MemberData(nameof(AllNonDefaultConfigurations))]
-        public void LookupClientSettings_Equal(LookupClientOptions options)
-        {
-            var opt = new LookupClientSettings(options);
-            var opt2 = new LookupClientSettings(options);
-
-            Assert.StrictEqual(opt, opt2);
-
-            // typed overload
-            Assert.True(opt.Equals(opt2));
-
-            // object overload
-            Assert.True(opt.Equals((object)opt2));
         }
 
         [Fact]
@@ -328,49 +198,47 @@ namespace DnsClient.Tests
 
             // Not resolving or setting any servers => should be empty.
             Assert.Empty(client.NameServers);
-            Assert.Equal(!defaultOptions.ContinueOnDnsError, client.Settings.ContinueOnDnsError);
-            Assert.Equal(!defaultOptions.ContinueOnEmptyResponse, client.Settings.ContinueOnEmptyResponse);
-            Assert.Equal(!defaultOptions.EnableAuditTrail, client.Settings.EnableAuditTrail);
-            Assert.Equal(TimeSpan.FromMinutes(1), client.Settings.MinimumCacheTimeout);
-            Assert.Equal(TimeSpan.FromMinutes(42), client.Settings.MaximumCacheTimeout);
-            Assert.Equal(!defaultOptions.Recursion, client.Settings.Recursion);
-            Assert.Equal(defaultOptions.Retries * 2, client.Settings.Retries);
-            Assert.Equal(!defaultOptions.ThrowDnsErrors, client.Settings.ThrowDnsErrors);
-            Assert.Equal(TimeSpan.FromMinutes(10), client.Settings.Timeout);
-            Assert.Equal(!defaultOptions.UseCache, client.Settings.UseCache);
-            Assert.Equal(!defaultOptions.UseRandomNameServer, client.Settings.UseRandomNameServer);
-            Assert.Equal(!defaultOptions.UseTcpFallback, client.Settings.UseTcpFallback);
-            Assert.Equal(!defaultOptions.UseTcpOnly, client.Settings.UseTcpOnly);
-            Assert.Equal(1234, client.Settings.ExtendedDnsBufferSize);
-            Assert.Equal(!defaultOptions.RequestDnsSecRecords, client.Settings.RequestDnsSecRecords);
-            Assert.Equal(!defaultOptions.CacheFailedResults, client.Settings.CacheFailedResults);
-            Assert.Equal(TimeSpan.FromSeconds(10), client.Settings.FailedResultsCacheDuration);
+            Assert.Equal(!defaultOptions.ContinueOnDnsError, client.Options.ContinueOnDnsError);
+            Assert.Equal(!defaultOptions.ContinueOnEmptyResponse, client.Options.ContinueOnEmptyResponse);
+            Assert.Equal(!defaultOptions.EnableAuditTrail, client.Options.EnableAuditTrail);
+            Assert.Equal(TimeSpan.FromMinutes(1), client.Options.MinimumCacheTimeout);
+            Assert.Equal(TimeSpan.FromMinutes(42), client.Options.MaximumCacheTimeout);
+            Assert.Equal(!defaultOptions.Recursion, client.Options.Recursion);
+            Assert.Equal(defaultOptions.Retries * 2, client.Options.Retries);
+            Assert.Equal(!defaultOptions.ThrowDnsErrors, client.Options.ThrowDnsErrors);
+            Assert.Equal(TimeSpan.FromMinutes(10), client.Options.Timeout);
+            Assert.Equal(!defaultOptions.UseCache, client.Options.UseCache);
+            Assert.Equal(!defaultOptions.UseRandomNameServer, client.Options.UseRandomNameServer);
+            Assert.Equal(!defaultOptions.UseTcpFallback, client.Options.UseTcpFallback);
+            Assert.Equal(!defaultOptions.UseTcpOnly, client.Options.UseTcpOnly);
+            Assert.Equal(1234, client.Options.ExtendedDnsBufferSize);
+            Assert.Equal(!defaultOptions.RequestDnsSecRecords, client.Options.RequestDnsSecRecords);
+            Assert.Equal(!defaultOptions.CacheFailedResults, client.Options.CacheFailedResults);
+            Assert.Equal(TimeSpan.FromSeconds(10), client.Options.FailedResultsCacheDuration);
 
-            Assert.Equal(new LookupClientSettings(options), client.Settings);
+            Assert.Equal(options, client.Options);
         }
 
         [Fact]
         public void QueryOptions_EdnsDisabled_WithSmallBuffer()
         {
-            var options = (DnsQuerySettings)new DnsQueryOptions()
+            var options = new DnsQueryOptions()
             {
                 ExtendedDnsBufferSize = DnsQueryOptions.MinimumBufferSize,
                 RequestDnsSecRecords = false
             };
-
             Assert.False(options.UseExtendedDns);
         }
 
         [Fact]
         public void QueryOptions_Edns_SmallerBufferFallback()
         {
-            var options = (DnsQuerySettings)new DnsQueryOptions()
+            var options = new DnsQueryOptions()
             {
                 // Anything less then minimum falls back to minimum.
                 ExtendedDnsBufferSize = DnsQueryOptions.MinimumBufferSize - 1,
                 RequestDnsSecRecords = false
             };
-
             Assert.False(options.UseExtendedDns);
             Assert.Equal(DnsQueryOptions.MinimumBufferSize, options.ExtendedDnsBufferSize);
         }
@@ -378,7 +246,7 @@ namespace DnsClient.Tests
         [Fact]
         public void QueryOptions_Edns_LargerBufferFallback()
         {
-            var options = (DnsQuerySettings)new DnsQueryOptions()
+            var options = new DnsQueryOptions()
             {
                 // Anything more then max falls back to max.
                 ExtendedDnsBufferSize = DnsQueryOptions.MaximumBufferSize + 1,
@@ -392,7 +260,7 @@ namespace DnsClient.Tests
         [Fact]
         public void QueryOptions_EdnsEnabled_ByLargeBuffer()
         {
-            var options = (DnsQuerySettings)new DnsQueryOptions()
+            var options = new DnsQueryOptions()
             {
                 ExtendedDnsBufferSize = DnsQueryOptions.MinimumBufferSize + 1,
                 RequestDnsSecRecords = false
@@ -404,7 +272,7 @@ namespace DnsClient.Tests
         [Fact]
         public void QueryOptions_EdnsEnabled_ByRequestDnsSec()
         {
-            var options = (DnsQuerySettings)new DnsQueryOptions()
+            var options = new DnsQueryOptions()
             {
                 ExtendedDnsBufferSize = DnsQueryOptions.MinimumBufferSize,
                 RequestDnsSecRecords = true
@@ -416,40 +284,37 @@ namespace DnsClient.Tests
         [Fact]
         public void LookupClientOptions_InvalidTimeout()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.Timeout = TimeSpan.FromMilliseconds(0);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { Timeout = TimeSpan.FromMilliseconds(0) };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_InvalidTimeout2()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.Timeout = TimeSpan.FromMilliseconds(-23);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { Timeout = TimeSpan.FromMilliseconds(-23) };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_InvalidTimeout3()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.Timeout = TimeSpan.FromDays(25);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { Timeout = TimeSpan.FromDays(25) };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_MinimumCacheTimeout_ZeroIgnored()
         {
-            var options = new LookupClientOptions();
-
-            options.MinimumCacheTimeout = TimeSpan.Zero;
-
+            var options = new LookupClientOptions()
+            {
+                MinimumCacheTimeout = TimeSpan.Zero
+            };
             Assert.Null(options.MinimumCacheTimeout);
         }
 
@@ -458,11 +323,8 @@ namespace DnsClient.Tests
         {
             var options = new LookupClientOptions()
             {
-                MinimumCacheTimeout = TimeSpan.Zero
+                MinimumCacheTimeout = Timeout.InfiniteTimeSpan
             };
-
-            options.MinimumCacheTimeout = Timeout.InfiniteTimeSpan;
-
             Assert.Equal(Timeout.InfiniteTimeSpan, options.MinimumCacheTimeout);
         }
 
@@ -471,42 +333,47 @@ namespace DnsClient.Tests
         {
             var options = new LookupClientOptions()
             {
-                MinimumCacheTimeout = Timeout.InfiniteTimeSpan
+                MinimumCacheTimeout = null
             };
-
-            options.MinimumCacheTimeout = null;
-
             Assert.Null(options.MinimumCacheTimeout);
         }
 
         [Fact]
         public void LookupClientOptions_InvalidMinimumCacheTimeout1()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.MinimumCacheTimeout = TimeSpan.FromMilliseconds(-23);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { MinimumCacheTimeout = TimeSpan.FromMilliseconds(-23) };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_InvalidMinimumCacheTimeout2()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.MinimumCacheTimeout = TimeSpan.FromDays(25);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { MinimumCacheTimeout = TimeSpan.FromDays(25) };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_MaximumCacheTimeout_ZeroIgnored()
         {
-            var options = new LookupClientOptions();
-
-            options.MaximumCacheTimeout = TimeSpan.Zero;
-
+            var options = new LookupClientOptions()
+            {
+                MaximumCacheTimeout = TimeSpan.Zero
+            };
             Assert.Null(options.MaximumCacheTimeout);
+        }
+
+        [Fact]
+        public void LookupClientOptions_MaximumCacheTimeout_AcceptsInfinite()
+        {
+            var options = new LookupClientOptions()
+            {
+                MaximumCacheTimeout = Timeout.InfiniteTimeSpan
+            };
+            Assert.Equal(Timeout.InfiniteTimeSpan, options.MaximumCacheTimeout);
         }
 
         [Fact]
@@ -514,72 +381,54 @@ namespace DnsClient.Tests
         {
             var options = new LookupClientOptions()
             {
-                MaximumCacheTimeout = Timeout.InfiniteTimeSpan
+                MaximumCacheTimeout = null
             };
-
-            options.MaximumCacheTimeout = null;
-
             Assert.Null(options.MaximumCacheTimeout);
-        }
-
-        [Fact]
-        public void LookupClientOptions_MaximumCacheTimeout_AcceptsInfinite()
-        {
-            var options = new LookupClientOptions();
-
-            options.MaximumCacheTimeout = Timeout.InfiniteTimeSpan;
-
-            Assert.Equal(Timeout.InfiniteTimeSpan, options.MaximumCacheTimeout);
         }
 
         [Fact]
         public void LookupClientOptions_InvalidMaximumCacheTimeout1()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.MaximumCacheTimeout = TimeSpan.FromMilliseconds(-23);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { MaximumCacheTimeout = TimeSpan.FromMilliseconds(-23) };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_InvalidMaximumCacheTimeout2()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.MaximumCacheTimeout = TimeSpan.FromDays(25);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { MaximumCacheTimeout = TimeSpan.FromDays(25) };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_InvalidCacheFailureDuration()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.FailedResultsCacheDuration = TimeSpan.FromMilliseconds(0);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { FailedResultsCacheDuration = TimeSpan.FromMilliseconds(0) };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_InvalidCacheFailureDuration2()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.FailedResultsCacheDuration = TimeSpan.FromMilliseconds(-23);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { FailedResultsCacheDuration = TimeSpan.FromMilliseconds(-23) };
+            });
         }
 
         [Fact]
         public void LookupClientOptions_InvalidCacheFailureDuration3()
         {
-            var options = new LookupClientOptions();
-
-            void act() => options.FailedResultsCacheDuration = TimeSpan.FromDays(25);
-
-            Assert.ThrowsAny<ArgumentOutOfRangeException>(act);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                return new LookupClientOptions() { FailedResultsCacheDuration = TimeSpan.FromDays(25) };
+            });
         }
 
         public static TheoryData<TestMatrixItem> All
@@ -599,26 +448,26 @@ namespace DnsClient.Tests
                     new TestMatrixItem("QueryReverseAsync(ip)", (client) => client.QueryReverseAsync(IPAddress.Any).GetAwaiter().GetResult()),
 
                     // by server
-                    new TestMatrixItem("QueryServer(s,n,t,c)", (client, servers) => client.QueryServer(servers, question.QueryName, question.QuestionType, question.QuestionClass)),
-                    new TestMatrixItem("QueryServer(s2,n,t,c)", (client, servers) => client.QueryServer(ToIPAddresses(servers), question.QueryName, question.QuestionType, question.QuestionClass)),
-                    new TestMatrixItem("QueryServer(s3,n,t,c)", (client, servers) => client.QueryServer(ToIPEndpoints(servers), question.QueryName, question.QuestionType, question.QuestionClass)),
-                    new TestMatrixItem("QueryServer(s,q)", (client, servers) => client.QueryServer(servers, question)),
-                    new TestMatrixItem("QueryServerAsync(s,n,t,c)", (client, servers) => client.QueryServerAsync(servers, question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerAsync(s2,n,t,c)", (client, servers) => client.QueryServerAsync(ToIPAddresses(servers), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerAsync(s3,n,t,c)", (client, servers) => client.QueryServerAsync(ToIPEndpoints(servers), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerAsync(s,q)", (client, servers) => client.QueryServerAsync(servers, question).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerReverse(s,ip)", (client, servers) => client.QueryServerReverse(servers, IPAddress.Any)),
-                    new TestMatrixItem("QueryServerReverse(s2,ip)", (client, servers) => client.QueryServerReverse(ToIPAddresses(servers), IPAddress.Any)),
-                    new TestMatrixItem("QueryServerReverse(s3,ip)", (client, servers) => client.QueryServerReverse(ToIPEndpoints(servers), IPAddress.Any)),
-                    new TestMatrixItem("QueryServerReverseAsync(s,ip)", (client, servers) => client.QueryServerReverseAsync(servers, IPAddress.Any).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerReverseAsync(s2,ip)", (client, servers) => client.QueryServerReverseAsync(ToIPAddresses(servers), IPAddress.Any).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryServerReverseAsync(s3,ip)", (client, servers) => client.QueryServerReverseAsync(ToIPEndpoints(servers), IPAddress.Any).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServer(s,n,t,c)", (client, servers) => client.QueryServer(servers.ToList(), question.QueryName, question.QuestionType, question.QuestionClass)),
+                    new TestMatrixItem("QueryServer(s2,n,t,c)", (client, servers) => client.QueryServer(ToIPAddresses(servers).ToList(), question.QueryName, question.QuestionType, question.QuestionClass)),
+                    new TestMatrixItem("QueryServer(s3,n,t,c)", (client, servers) => client.QueryServer(ToIPEndpoints(servers).ToList(), question.QueryName, question.QuestionType, question.QuestionClass)),
+                    new TestMatrixItem("QueryServer(s,q)", (client, servers) => client.QueryServer(servers.ToList(), question)),
+                    new TestMatrixItem("QueryServerAsync(s,n,t,c)", (client, servers) => client.QueryServerAsync(servers.ToList(), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerAsync(s2,n,t,c)", (client, servers) => client.QueryServerAsync(ToIPAddresses(servers).ToList(), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerAsync(s3,n,t,c)", (client, servers) => client.QueryServerAsync(ToIPEndpoints(servers).ToList(), question.QueryName, question.QuestionType, question.QuestionClass).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerAsync(s,q)", (client, servers) => client.QueryServerAsync(servers.ToList(), question).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerReverse(s,ip)", (client, servers) => client.QueryServerReverse(servers.ToList(), IPAddress.Any)),
+                    new TestMatrixItem("QueryServerReverse(s2,ip)", (client, servers) => client.QueryServerReverse(ToIPAddresses(servers).ToList(), IPAddress.Any)),
+                    new TestMatrixItem("QueryServerReverse(s3,ip)", (client, servers) => client.QueryServerReverse(ToIPEndpoints(servers).ToList(), IPAddress.Any)),
+                    new TestMatrixItem("QueryServerReverseAsync(s,ip)", (client, servers) => client.QueryServerReverseAsync(servers.ToList(), IPAddress.Any).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerReverseAsync(s2,ip)", (client, servers) => client.QueryServerReverseAsync(ToIPAddresses(servers).ToList(), IPAddress.Any).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryServerReverseAsync(s3,ip)", (client, servers) => client.QueryServerReverseAsync(ToIPEndpoints(servers).ToList(), IPAddress.Any).GetAwaiter().GetResult()),
 
                     // with servers and options
-                    new TestMatrixItem("Query(q,s,o)", (client, options, servers) => client.QueryServer(servers, question, options)),
-                    new TestMatrixItem("QueryAsync(q,s,o)", (client, options, servers) => client.QueryServerAsync(servers, question, options).GetAwaiter().GetResult()),
-                    new TestMatrixItem("QueryReverse(ip,s,o)", (client, options, servers) => client.QueryServerReverse(servers, IPAddress.Any, options)),
-                    new TestMatrixItem("QueryReverseAsync(ip,s,o)", (client, options, servers) => client.QueryServerReverseAsync(servers, IPAddress.Any, options).GetAwaiter().GetResult()),
+                    new TestMatrixItem("Query(q,s,o)", (client, options, servers) => client.QueryServer(servers.ToList(), question, options)),
+                    new TestMatrixItem("QueryAsync(q,s,o)", (client, options, servers) => client.QueryServerAsync(servers.ToList(), question, options).GetAwaiter().GetResult()),
+                    new TestMatrixItem("QueryReverse(ip,s,o)", (client, options, servers) => client.QueryServerReverse(servers.ToList(), IPAddress.Any, options)),
+                    new TestMatrixItem("QueryReverseAsync(ip,s,o)", (client, options, servers) => client.QueryServerReverseAsync(servers.ToList(), IPAddress.Any, options).GetAwaiter().GetResult()),
 
                     // with query options
                     new TestMatrixItem("Query(q,o)", (client, options) => client.Query(question, options)),
@@ -639,16 +488,16 @@ namespace DnsClient.Tests
         }
 
         public static TheoryData<TestMatrixItem> AllWithoutServerQueries
-            => new(All.SelectMany(p => p).OfType<TestMatrixItem>().Where(a => !a.UsesServers));
+            => new(All.OfType<TestMatrixItem>().Where(a => !a.UsesServers));
 
         public static TheoryData<TestMatrixItem> AllWithServers
-            => new(All.SelectMany(p => p).OfType<TestMatrixItem>().Where(a => a.UsesServers));
+            => new(All.OfType<TestMatrixItem>().Where(a => a.UsesServers));
 
         public static TheoryData<TestMatrixItem> AllWithQueryOptions
-            => new(All.SelectMany(p => p).OfType<TestMatrixItem>().Where(a => a.UsesQueryOptions));
+            => new(All.OfType<TestMatrixItem>().Where(a => a.UsesQueryOptions));
 
         public static TheoryData<TestMatrixItem> AllWithoutQueryOptionsOrServerQueries
-            => new(All.SelectMany(p => p).OfType<TestMatrixItem>().Where(a => (a.UsesQueryOptions || a.UsesServers)));
+            => new(All.OfType<TestMatrixItem>().Where(a => (a.UsesQueryOptions || a.UsesServers)));
 
         [Theory]
         [MemberData(nameof(AllWithoutServerQueries))]
@@ -697,32 +546,32 @@ namespace DnsClient.Tests
 
             Assert.Null(result.TestClient.TcpHandler.LastRequest);
             Assert.NotNull(result.TestClient.UdpHandler.LastRequest);
-            Assert.StrictEqual(new LookupClientSettings(unresolvedOptions), result.TestClient.Client.Settings);
+            Assert.StrictEqual(unresolvedOptions, result.TestClient.Client.Options);
 
             if (test.UsesQueryOptions && test.UsesServers)
             {
-                Assert.Equal(servers[0], result.TestClient.UdpHandler.LastServer);
+                Assert.Equal(servers[0], new NameServer(result.TestClient.UdpHandler.LastServer));
                 Assert.Equal(servers[0], result.Response.NameServer);
-                Assert.Equal(new DnsQuerySettings(queryOptions), result.Response.Settings);
+                Assert.Equal(queryOptions, result.Response.Settings);
             }
             else if (test.UsesQueryOptions)
             {
-                Assert.Equal(queryOptions.NameServers[0], result.TestClient.UdpHandler.LastServer);
-                Assert.Equal(queryOptions.NameServers[0], result.Response.NameServer);
-                Assert.Equal(new DnsQuerySettings(queryOptions), result.Response.Settings);
+                Assert.Equal(queryOptions.NameServers.First(), new NameServer(result.TestClient.UdpHandler.LastServer));
+                Assert.Equal(queryOptions.NameServers.First(), result.Response.NameServer);
+                Assert.Equal(queryOptions, result.Response.Settings);
             }
             else if (test.UsesServers)
             {
-                Assert.Equal(servers[0], result.TestClient.UdpHandler.LastServer);
+                Assert.Equal(servers[0], new NameServer(result.TestClient.UdpHandler.LastServer));
                 Assert.Equal(servers[0], result.Response.NameServer);
                 // by server overrules settings, but doesn't change the servers collection in settings..
-                Assert.Equal(new DnsQuerySettings(unresolvedOptions), result.Response.Settings);
+                Assert.Equal(unresolvedOptions, result.Response.Settings);
             }
             else
             {
-                Assert.Equal(unresolvedOptions.NameServers[0], result.TestClient.UdpHandler.LastServer);
-                Assert.Equal(unresolvedOptions.NameServers[0], result.Response.NameServer);
-                Assert.Equal(new DnsQuerySettings(unresolvedOptions), result.Response.Settings);
+                Assert.Equal(unresolvedOptions.NameServers.First(), new NameServer(result.TestClient.UdpHandler.LastServer));
+                Assert.Equal(unresolvedOptions.NameServers.First(), result.Response.NameServer);
+                Assert.Equal(unresolvedOptions, result.Response.Settings);
             }
         }
 
@@ -751,8 +600,8 @@ namespace DnsClient.Tests
             Assert.Null(result.TestClient.UdpHandler.LastRequest);
             Assert.Equal(NameServer.GooglePublicDns2IPv6, result.TestClient.TcpHandler.LastServer);
             Assert.Equal(NameServer.GooglePublicDns2IPv6, result.Response.NameServer);
-            Assert.Equal(new LookupClientSettings(defaultOptions), result.TestClient.Client.Settings);
-            Assert.Equal(new DnsQuerySettings(queryOptions), result.Response.Settings);
+            Assert.Equal(defaultOptions, result.TestClient.Client.Options);
+            Assert.Equal(queryOptions, result.Response.Settings);
         }
 
         [Theory]
@@ -787,7 +636,7 @@ namespace DnsClient.Tests
             Assert.Equal(NameServer.GooglePublicDns2IPv6, result.Response.NameServer);
             // make sure we don't alter the original object
             Assert.Empty(queryOptions.NameServers);
-            Assert.Equal(new DnsQuerySettings(queryOptions), result.Response.Settings);
+            Assert.Equal(queryOptions, result.Response.Settings);
         }
 
         [Theory]
@@ -983,7 +832,7 @@ namespace DnsClient.Tests
 
             public override DnsMessageHandleType Type { get; }
 
-            public IReadOnlyList<DnsQueryAndServerSettings> UsedSettings { get; }
+            public IReadOnlyList<DnsQueryAndServerOptions> UsedSettings { get; }
 
             public IPEndPoint LastServer { get; private set; }
 

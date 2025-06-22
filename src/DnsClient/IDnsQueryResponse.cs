@@ -82,6 +82,6 @@ namespace DnsClient
         /// <summary>
         /// Gets the settings used to produce this response.
         /// </summary>
-        DnsQuerySettings Settings { get; }
+        DnsQueryOptions Settings { get; }
     }
 }

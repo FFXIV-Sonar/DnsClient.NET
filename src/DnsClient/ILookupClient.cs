@@ -19,11 +19,11 @@ namespace DnsClient
         /// <summary>
         /// Gets the list of configured or resolved name servers of the <see cref="ILookupClient"/> instance.
         /// </summary>
-        IReadOnlyCollection<NameServer> NameServers { get; }
+        IEnumerable<NameServer> NameServers { get; }
 
         /// <summary>
         /// Gets the configured settings of the <see cref="ILookupClient"/> instance.
         /// </summary>
-        LookupClientSettings Settings { get; }
+        LookupClientOptions Options { get; }
     }
 }

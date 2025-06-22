@@ -75,12 +75,11 @@ namespace DigApp
             _query = string.IsNullOrWhiteSpace(QueryArg.Value) ? string.Empty : QueryArg.Value;
             _runSync = SyncArg.HasValue();
 
-            _settings = GetLookupSettings();
-            _settings.EnableAuditTrail = false;
+            _settings = GetLookupSettings(continueOnDnsError: true);
             _running = true;
 
             Console.WriteLine($"; <<>> Starting perf run with {_clients} (x{_tasks}) clients running for {_runtime} seconds <<>>");
-            Console.WriteLine($"; ({_settings.NameServers.Count} Servers, caching:{_settings.UseCache}, " +
+            Console.WriteLine($"; ({_settings.NameServers.Count()} Servers, caching:{_settings.UseCache}, " +
                 $"minttl:{_settings.MinimumCacheTimeout?.TotalMilliseconds}, " +
                 $"maxttl:{_settings.MaximumCacheTimeout?.TotalMilliseconds})");
 
@@ -143,8 +142,7 @@ namespace DigApp
         private async Task ExcecuteRun(int numTasks = 8)
         {
             //var swatch = Stopwatch.StartNew();
-            var options = GetLookupSettings();
-            options.EnableAuditTrail = false;
+            var options = GetLookupSettings(continueOnDnsError: true);
             var lookup = GetDnsLookup(options);
 
             while (_running)

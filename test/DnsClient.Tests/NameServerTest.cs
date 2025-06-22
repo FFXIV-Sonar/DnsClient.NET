@@ -21,42 +21,42 @@ namespace DnsClient.Tests
         }
 
         [Fact]
-        public void ValidateAnyAddressIPv4()
+        public void AnyAddressIPv4IsInvalid()
         {
-            Assert.ThrowsAny<InvalidOperationException>(() => NameServer.ValidateNameServers(new[] { new NameServer(IPAddress.Any) }));
+            Assert.False(new NameServer(IPAddress.Any).IsValid);
         }
 
         [Fact]
-        public void ValidateAnyAddressIPv6()
+        public void AnyAddressIPv6IsInvalid()
         {
-            Assert.ThrowsAny<InvalidOperationException>(() => NameServer.ValidateNameServers(new[] { new NameServer(IPAddress.IPv6Any) }));
+            Assert.False(new NameServer(IPAddress.IPv6Any).IsValid);
         }
 
         [Fact]
         public void ValidateAnyAddress_LookupClientInit()
         {
-            Assert.ThrowsAny<InvalidOperationException>(() => new LookupClient(IPAddress.Any));
-            Assert.ThrowsAny<InvalidOperationException>(() => new LookupClient(IPAddress.Any, 33));
-            Assert.ThrowsAny<InvalidOperationException>(() => new LookupClient(IPAddress.IPv6Any));
-            Assert.ThrowsAny<InvalidOperationException>(() => new LookupClient(IPAddress.IPv6Any, 555));
+            Assert.Throws<InvalidOperationException>(() => new LookupClient(IPAddress.Any));
+            Assert.Throws<InvalidOperationException>(() => new LookupClient(IPAddress.Any, 33));
+            Assert.Throws<InvalidOperationException>(() => new LookupClient(IPAddress.IPv6Any));
+            Assert.Throws<InvalidOperationException>(() => new LookupClient(IPAddress.IPv6Any, 555));
         }
 
         [Fact]
         public void ValidateAnyAddress_LookupClientQuery()
         {
-            var client = new LookupClient(NameServer.Cloudflare);
+            var client = new LookupClient(NameServer.CloudflarePublicDns);
 
-            Assert.ThrowsAny<InvalidOperationException>(() => client.QueryServer(new[] { IPAddress.Any }, "query", QueryType.A));
-            Assert.ThrowsAny<InvalidOperationException>(() => client.QueryServerReverse(new[] { IPAddress.Any }, IPAddress.Loopback));
+            Assert.Throws<InvalidOperationException>(() => client.QueryServer(new[] { IPAddress.Any }, "query", QueryType.A));
+            Assert.Throws<InvalidOperationException>(() => client.QueryServerReverse(new[] { IPAddress.Any }, IPAddress.Loopback));
         }
 
         [Fact]
         public async Task ValidateAnyAddress_LookupClientQueryAsync()
         {
-            var client = new LookupClient(NameServer.Cloudflare);
+            var client = new LookupClient(NameServer.CloudflarePublicDns);
 
-            await Assert.ThrowsAnyAsync<InvalidOperationException>(() => client.QueryServerAsync(new[] { IPAddress.Any }, "query", QueryType.A));
-            await Assert.ThrowsAnyAsync<InvalidOperationException>(() => client.QueryServerReverseAsync(new[] { IPAddress.Any }, IPAddress.Loopback));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => client.QueryServerAsync(new[] { IPAddress.Any }, "query", QueryType.A));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => client.QueryServerReverseAsync(new[] { IPAddress.Any }, IPAddress.Loopback));
         }
 
         [Fact]

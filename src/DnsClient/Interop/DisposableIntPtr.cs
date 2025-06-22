@@ -4,39 +4,39 @@
 
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace DnsClient
 {
-    internal class DisposableIntPtr : IDisposable
+    internal sealed class DisposableIntPtr : IDisposable
     {
-        public IntPtr Ptr => _ptr;
+        private nint _ptr;
 
+        public nint Ptr { get; }
         public bool IsValid { get; private set; } = true;
-
-        private IntPtr _ptr;
 
         private DisposableIntPtr()
         {
         }
 
-        public static DisposableIntPtr Alloc(int size)
+        public static unsafe DisposableIntPtr Alloc(nuint size)
         {
             var ptr = new DisposableIntPtr();
             try
             {
-                ptr._ptr = Marshal.AllocHGlobal(size);
+                ptr._ptr = (nint)NativeMemory.Alloc(size);
             }
             catch (OutOfMemoryException)
             {
                 ptr.IsValid = false;
             }
-
             return ptr;
         }
 
-        public void Dispose()
+        public unsafe void Dispose()
         {
-            Marshal.FreeHGlobal(_ptr);
+            var ptr = Interlocked.Exchange(ref this._ptr, 0);
+            NativeMemory.Free((void*)ptr);
         }
     }
 }

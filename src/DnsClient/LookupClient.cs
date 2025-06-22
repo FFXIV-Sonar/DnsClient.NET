@@ -4,7 +4,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -40,7 +42,7 @@ namespace DnsClient
     /// ]]>
     /// </code>
     /// </example>
-    public class LookupClient : ILookupClient, IDnsQuery
+    public sealed class LookupClient : ILookupClient
     {
         private const int LogEventStartQuery = 1;
         private const int LogEventQuery = 2;
@@ -59,19 +61,18 @@ namespace DnsClient
         private const int LogEventResponseOpt = 31;
         private const int LogEventResponseMissingOpt = 80;
 
-        private readonly LookupClientOptions _originalOptions;
         private readonly DnsMessageHandler _messageHandler;
         private readonly DnsMessageHandler _tcpFallbackHandler;
         private readonly ILogger _logger;
-        private readonly SkipWorker _skipper;
+        private readonly SkipWorker? _skipper;
 
-        private IReadOnlyCollection<NameServer> _resolvedNameServers;
-
-        /// <inheritdoc/>
-        public IReadOnlyCollection<NameServer> NameServers => Settings.NameServers;
+        private NameServer[] _nameServers = [];
 
         /// <inheritdoc/>
-        public LookupClientSettings Settings { get; private set; }
+        public IEnumerable<NameServer> NameServers => this._nameServers;
+
+        /// <inheritdoc/>
+        public LookupClientOptions Options { get; private set; }
 
         internal ResponseCache Cache { get; }
 
@@ -81,7 +82,7 @@ namespace DnsClient
         /// </summary>
         /// <remarks>
         /// This uses <see cref="NameServer.ResolveNameServers(bool, bool)"/>.
-        /// The resulting list of name servers is highly dependent on the local network configuration and OS.
+        /// The resulting list of name nameServers is highly dependent on the local network configuration and OS.
         /// </remarks>
         /// <example>
         /// In the following example, we will create a new <see cref="LookupClient"/> without explicitly defining any DNS server.
@@ -98,28 +99,7 @@ namespace DnsClient
         /// ]]>
         /// </code>
         /// </example>
-        public LookupClient()
-            : this(new LookupClientOptions())
-        {
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="LookupClient"/> with default settings and one or more DNS servers identified by their <see cref="IPAddress"/>.
-        /// The default port <c>53</c> will be used for all <see cref="IPAddress"/>s provided.
-        /// </summary>
-        /// <param name="nameServers">The <see cref="IPAddress"/>(s) to be used by this <see cref="LookupClient"/> instance.</param>
-        /// <example>
-        /// Connecting to one or more DNS server using the default port:
-        /// <code>
-        /// <![CDATA[
-        /// // configuring the client to use google's public IPv4 DNS servers.
-        /// var client = new LookupClient(IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4"));
-        /// ]]>
-        /// </code>
-        /// </example>
-        /// <exception cref="ArgumentNullException">If <paramref name="nameServers"/>is <c>null</c>.</exception>
-        public LookupClient(params IPAddress[] nameServers)
-            : this(new LookupClientOptions(nameServers))
+        public LookupClient() : this(new LookupClientOptions())
         {
         }
 
@@ -138,44 +118,16 @@ namespace DnsClient
         /// </example>
         /// <exception cref="ArgumentNullException">If <paramref name="address"/>is <c>null</c>.</exception>
         public LookupClient(IPAddress address, int port)
-           : this(new LookupClientOptions(new[] { new NameServer(address, port) }))
+           : this(new LookupClientOptions(new NameServer(address, port)))
         {
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="LookupClient"/> with default settings and the given name servers.
-        /// </summary>
-        /// <param name="nameServers">The <see cref="IPEndPoint"/>(s) to be used by this <see cref="LookupClient"/> instance.</param>
-        /// <example>
-        /// Connecting to one specific DNS server which does not run on the default port <c>53</c>:
-        /// <code>
-        /// <![CDATA[
-        /// var endpoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 8600);
-        /// var client = new LookupClient(endpoint);
-        /// ]]>
-        /// </code>
-        /// <para>
-        /// The <see cref="NameServer"/> class also contains predefined <see cref="IPEndPoint"/>s for the public Google DNS servers, which can be used as follows:
-        /// <code>
-        /// <![CDATA[
-        /// var client = new LookupClient(NameServer.GooglePublicDns, NameServer.GooglePublicDnsIPv6);
-        /// ]]>
-        /// </code>
-        /// </para>
-        /// </example>
-        /// <exception cref="ArgumentNullException">If <paramref name="nameServers"/>is <c>null</c>.</exception>
-        public LookupClient(params IPEndPoint[] nameServers)
-            : this(new LookupClientOptions(nameServers))
-        {
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="LookupClient"/> with default settings and the given name servers.
+        /// Creates a new instance of <see cref="LookupClient"/> with default settings and the given name nameServers.
         /// </summary>
         /// <param name="nameServers">The <see cref="NameServer"/>(s) to be used by this <see cref="LookupClient"/> instance.</param>
         /// <exception cref="ArgumentNullException">If <paramref name="nameServers"/>is <c>null</c>.</exception>
-        public LookupClient(params NameServer[] nameServers)
-            : this(new LookupClientOptions(nameServers))
+        public LookupClient(params NameServer[] nameServers) : this(new LookupClientOptions(nameServers))
         {
         }
 
@@ -184,98 +136,73 @@ namespace DnsClient
         /// </summary>
         /// <param name="options">The options to use with this <see cref="LookupClient"/> instance.</param>
         /// <exception cref="ArgumentNullException">If <paramref name="options"/>is <c>null</c>.</exception>
-        public LookupClient(LookupClientOptions options)
-            : this(options, null, null)
+        public LookupClient(LookupClientOptions options) : this(options, null, null)
         {
         }
 
-        internal LookupClient(LookupClientOptions options, DnsMessageHandler udpHandler = null, DnsMessageHandler tcpHandler = null)
+        internal LookupClient(LookupClientOptions options, DnsMessageHandler? udpHandler = null, DnsMessageHandler? tcpHandler = null)
         {
-            if (options is null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
+            ArgumentNullException.ThrowIfNull(options);
 
-            _originalOptions = options;
-            _logger = Logging.LoggerFactory.CreateLogger("DnsClient.LookupClient");
-            _messageHandler = udpHandler ?? new DnsUdpMessageHandler();
-            _tcpFallbackHandler = tcpHandler ?? new DnsTcpMessageHandler();
+            this._logger = Logging.LoggerFactory.CreateLogger("DnsClient.LookupClient");
+            this._messageHandler = udpHandler ?? new DnsUdpMessageHandler();
+            this._tcpFallbackHandler = tcpHandler ?? new DnsTcpMessageHandler();
 
-            if (_messageHandler.Type != DnsMessageHandleType.UDP)
-            {
-                throw new ArgumentException("UDP message handler's type must be UDP.", nameof(udpHandler));
-            }
-            if (_tcpFallbackHandler.Type != DnsMessageHandleType.TCP)
-            {
-                throw new ArgumentException("TCP message handler's type must be TCP.", nameof(tcpHandler));
-            }
+            this.Options = options;
+            this.Cache = new ResponseCache(true, options.MinimumCacheTimeout, options.MaximumCacheTimeout, options.FailedResultsCacheDuration);
 
-            // Setting up name servers.
+            if (this._messageHandler.Type != DnsMessageHandleType.UDP) throw new ArgumentException("UDP message handler's type must be UDP.", nameof(udpHandler));
+            if (this._tcpFallbackHandler.Type != DnsMessageHandleType.TCP) throw new ArgumentException("TCP message handler's type must be TCP.", nameof(tcpHandler));
+
+            // Setting up name nameServers.
             // Using manually configured ones and/or auto resolved ones.
-            IReadOnlyCollection<NameServer> servers = _originalOptions.NameServers?.ToArray() ?? new NameServer[0];
-
-            if (options.AutoResolveNameServers)
+            this.CheckNamneServers();
+            this._skipper = new SkipWorker(
+            () =>
             {
-                _resolvedNameServers = NameServer.ResolveNameServers(skipIPv6SiteLocal: true, fallbackToGooglePublicDns: false);
-                servers = servers.Concat(_resolvedNameServers).ToArray();
-
-                // This will periodically get triggered on Query calls and
-                // will perform the same check as on NetworkAddressChanged.
-                // The event doesn't seem to get fired on Linux for example...
-                // TODO: Maybe there is a better way, but this will work for now.
-                _skipper = new SkipWorker(
-                () =>
+                if (this._logger.IsEnabled(LogLevel.Debug))
                 {
-                    if (_logger.IsEnabled(LogLevel.Debug))
-                    {
-                        _logger.LogDebug("Checking resolved name servers for network changes...");
-                    }
-
-                    CheckResolvedNameservers();
-                },
-                skip: 60 * 1000);
-            }
-
-            servers = NameServer.ValidateNameServers(servers, _logger);
-
-            Settings = new LookupClientSettings(options, servers);
-            Cache = new ResponseCache(true, Settings.MinimumCacheTimeout, Settings.MaximumCacheTimeout, Settings.FailedResultsCacheDuration);
+                    this._logger.LogDebug("Checking resolved name nameServers for network changes...");
+                }
+                this.CheckNamneServers();
+            },
+            skip: 60 * 1000);
         }
 
-        private void CheckResolvedNameservers()
+        private void CheckNamneServers()
         {
             try
             {
-                var newServers = NameServer.ResolveNameServers(skipIPv6SiteLocal: true, fallbackToGooglePublicDns: false);
+                var newServers = (this.Options.NameServers ?? [])
+                    .Concat(this.Options.AutoResolveNameServers ? NameServer.ResolveNameServers(skipIPv6SiteLocal: true, fallbackToPublicDns: false) : [])
+                    .Where(ns => ns.IsValid)
+                    .Distinct().ToArray();
 
-                if (newServers == null || newServers.Count == 0)
+                if (this._nameServers.SequenceEqual(newServers))
                 {
-                    _logger.LogWarning("Could not resolve any name servers, keeping current configuration.");
-                    return;
+                    this._logger.LogTrace("No configuration changes detected.");
+                }
+                else
+                {
+                    this._logger.LogDebug("Resolved name nameServers: {0}", string.Join(", ", newServers.AsEnumerable()));
+                    this._nameServers = newServers;
                 }
 
-                if (_resolvedNameServers.SequenceEqual(newServers))
-                {
-                    if (_logger.IsEnabled(LogLevel.Debug))
-                    {
-                        _logger.LogDebug("No name server changes detected, still using {0}", string.Join(",", newServers));
-                    }
-                    return;
-                }
-
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation("Found changes in local network, configured name servers now are: {0}", string.Join(",", newServers));
-                }
-
-                _resolvedNameServers = newServers;
-                var servers = _originalOptions.NameServers.Concat(_resolvedNameServers).ToArray();
-                Settings = new LookupClientSettings(_originalOptions, servers);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error trying to resolve name servers.");
+                this._logger.LogError(ex, "Error trying to resolve name nameServers, keeping current configuration.");
             }
+        }
+
+        [SuppressMessage("Security", "CA5394", Justification = "Not needed.")]
+        internal NameServer[] ShuffleNameServers()
+        {
+            if (this.Options.UseRandomNameServer && this._nameServers.Length > 1)
+            {
+                return [.. this._nameServers.OrderBy(ns => Random.Shared.Next())];
+            }
+            return this._nameServers;
         }
 
         /// <inheritdoc/>
@@ -284,262 +211,125 @@ namespace DnsClient
 
         /// <inheritdoc/>
         public IDnsQueryResponse QueryReverse(IPAddress ipAddress, DnsQueryAndServerOptions queryOptions)
-            => Query(GetReverseQuestion(ipAddress), queryOptions);
+            => this.Query(GetReverseQuestion(ipAddress), queryOptions);
 
         /// <inheritdoc/>
         public Task<IDnsQueryResponse> QueryReverseAsync(IPAddress ipAddress, CancellationToken cancellationToken = default)
-            => QueryAsync(GetReverseQuestion(ipAddress), cancellationToken: cancellationToken);
+            => this.QueryAsync(GetReverseQuestion(ipAddress), cancellationToken: cancellationToken);
 
         /// <inheritdoc/>
         public Task<IDnsQueryResponse> QueryReverseAsync(IPAddress ipAddress, DnsQueryAndServerOptions queryOptions, CancellationToken cancellationToken = default)
-            => QueryAsync(GetReverseQuestion(ipAddress), queryOptions, cancellationToken);
+            => this.QueryAsync(GetReverseQuestion(ipAddress), queryOptions, cancellationToken);
 
         /// <inheritdoc/>
         public IDnsQueryResponse Query(string query, QueryType queryType, QueryClass queryClass = QueryClass.IN)
-            => Query(new DnsQuestion(query, queryType, queryClass));
+            => this.Query(new DnsQuestion(query, queryType, queryClass));
 
         /// <inheritdoc/>
         public IDnsQueryResponse Query(DnsQuestion question)
-        {
-            if (question is null)
-            {
-                throw new ArgumentNullException(nameof(question));
-            }
-
-            var settings = GetSettings();
-            return QueryInternal(question, settings, settings.ShuffleNameServers());
-        }
+            => this.QueryInternal(question, this.Options, this.ShuffleNameServers());
 
         /// <inheritdoc/>
         public IDnsQueryResponse Query(DnsQuestion question, DnsQueryAndServerOptions queryOptions)
-        {
-            if (question is null)
-            {
-                throw new ArgumentNullException(nameof(question));
-            }
-
-            if (queryOptions is null)
-            {
-                throw new ArgumentNullException(nameof(queryOptions));
-            }
-
-            var settings = GetSettings(queryOptions);
-            return QueryInternal(question, settings, settings.ShuffleNameServers());
-        }
+            => this.QueryInternal(question, queryOptions, this.ShuffleNameServers());
 
         /// <inheritdoc/>
         public IDnsQueryResponse QueryCache(string query, QueryType queryType, QueryClass queryClass = QueryClass.IN)
-            => QueryCache(new DnsQuestion(query, queryType, queryClass));
+            => this.QueryCache(new DnsQuestion(query, queryType, queryClass));
 
         /// <inheritdoc/>
         public IDnsQueryResponse QueryCache(DnsQuestion question)
-        {
-            if (question is null)
-            {
-                throw new ArgumentNullException(nameof(question));
-            }
-
-            var settings = GetSettings();
-            return QueryCache(question, settings);
-        }
+            => this.QueryCache(question, this.Options);
 
         /// <inheritdoc/>
         public Task<IDnsQueryResponse> QueryAsync(string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default)
-            => QueryAsync(new DnsQuestion(query, queryType, queryClass), cancellationToken: cancellationToken);
+            => this.QueryAsync(new DnsQuestion(query, queryType, queryClass), cancellationToken: cancellationToken);
 
         /// <inheritdoc/>
         public Task<IDnsQueryResponse> QueryAsync(DnsQuestion question, CancellationToken cancellationToken = default)
-        {
-            if (question is null)
-            {
-                throw new ArgumentNullException(nameof(question));
-            }
-
-            var settings = GetSettings();
-            return QueryInternalAsync(question, settings, settings.ShuffleNameServers(), cancellationToken: cancellationToken);
-        }
+            => this.QueryInternalAsync(question, this.Options, this.ShuffleNameServers(), cancellationToken: cancellationToken);
 
         /// <inheritdoc/>
         public Task<IDnsQueryResponse> QueryAsync(DnsQuestion question, DnsQueryAndServerOptions queryOptions, CancellationToken cancellationToken = default)
+            => this.QueryInternalAsync(question, queryOptions, queryOptions.ShuffleNameServers(), cancellationToken: cancellationToken); // BUG: Auto-resolve not taken into account
+
+        /// <inheritdoc/>
+        public IDnsQueryResponse QueryServer(IEnumerable<IPAddress> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN)
+            => this.QueryServer(NameServer.Convert(servers), new DnsQuestion(query, queryType, queryClass));
+
+        /// <inheritdoc/>
+        public IDnsQueryResponse QueryServer(IEnumerable<IPEndPoint> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN)
+            => this.QueryServer(NameServer.Convert(servers), new DnsQuestion(query, queryType, queryClass));
+
+        /// <inheritdoc/>
+        public IDnsQueryResponse QueryServer(IEnumerable<NameServer> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN)
+            => this.QueryServer(servers, new DnsQuestion(query, queryType, queryClass));
+
+        /// <inheritdoc/>
+        public IDnsQueryResponse QueryServer(IEnumerable<NameServer> servers, DnsQuestion question)
+            => this.QueryInternal(question, this.Options, servers);
+
+        /// <inheritdoc/>
+        public IDnsQueryResponse QueryServer(IEnumerable<NameServer> servers, DnsQuestion question, DnsQueryOptions queryOptions)
+            => this.QueryInternal(question, queryOptions, servers);
+
+        /// <inheritdoc/>
+        public Task<IDnsQueryResponse> QueryServerAsync(IEnumerable<IPAddress> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default)
+            => this.QueryServerAsync(NameServer.Convert(servers), new DnsQuestion(query, queryType, queryClass), cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IDnsQueryResponse> QueryServerAsync(IEnumerable<IPEndPoint> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default)
+            => this.QueryServerAsync(NameServer.Convert(servers), new DnsQuestion(query, queryType, queryClass), cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IDnsQueryResponse> QueryServerAsync(IEnumerable<NameServer> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default)
+            => this.QueryServerAsync(servers, new DnsQuestion(query, queryType, queryClass), cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IDnsQueryResponse> QueryServerAsync(IEnumerable<NameServer> servers, DnsQuestion question, CancellationToken cancellationToken = default)
+            => this.QueryInternalAsync(question, this.Options, servers.Where(ns => ns.IsValid), cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IDnsQueryResponse> QueryServerAsync(IEnumerable<NameServer> servers, DnsQuestion question, DnsQueryOptions queryOptions, CancellationToken cancellationToken = default)
+            => this.QueryInternalAsync(question, queryOptions, servers.Where(ns => ns.IsValid), cancellationToken);
+
+        /// <inheritdoc/>
+        public IDnsQueryResponse QueryServerReverse(IEnumerable<IPAddress> servers, IPAddress ipAddress)
+            => this.QueryServerReverse(NameServer.Convert(servers), ipAddress);
+
+        /// <inheritdoc/>
+        public IDnsQueryResponse QueryServerReverse(IEnumerable<IPEndPoint> servers, IPAddress ipAddress)
+            => this.QueryServerReverse(NameServer.Convert(servers), ipAddress);
+
+        /// <inheritdoc/>
+        public IDnsQueryResponse QueryServerReverse(IEnumerable<NameServer> servers, IPAddress ipAddress)
+            => this.QueryServer(servers, GetReverseQuestion(ipAddress));
+
+        /// <inheritdoc/>
+        public IDnsQueryResponse QueryServerReverse(IEnumerable<NameServer> servers, IPAddress ipAddress, DnsQueryOptions queryOptions)
+            => this.QueryServer(servers, GetReverseQuestion(ipAddress), queryOptions);
+
+        /// <inheritdoc/>
+        public Task<IDnsQueryResponse> QueryServerReverseAsync(IEnumerable<IPAddress> servers, IPAddress ipAddress, CancellationToken cancellationToken = default)
+            => this.QueryServerReverseAsync(NameServer.Convert(servers), ipAddress, cancellationToken: cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IDnsQueryResponse> QueryServerReverseAsync(IEnumerable<IPEndPoint> servers, IPAddress ipAddress, CancellationToken cancellationToken = default)
+            => this.QueryServerReverseAsync(NameServer.Convert(servers), ipAddress, cancellationToken: cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IDnsQueryResponse> QueryServerReverseAsync(IEnumerable<NameServer> servers, IPAddress ipAddress, CancellationToken cancellationToken = default)
+            => this.QueryServerAsync(servers, GetReverseQuestion(ipAddress), cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<IDnsQueryResponse> QueryServerReverseAsync(IEnumerable<NameServer> servers, IPAddress ipAddress, DnsQueryOptions queryOptions, CancellationToken cancellationToken = default)
+            => this.QueryServerAsync(servers, GetReverseQuestion(ipAddress), queryOptions, cancellationToken);
+
+        private IDnsQueryResponse QueryInternal(DnsQuestion question, DnsQueryOptions queryOptions, IEnumerable<NameServer> servers)
         {
-            if (question is null)
+            if (!servers.Any())
             {
-                throw new ArgumentNullException(nameof(question));
-            }
-
-            if (queryOptions is null)
-            {
-                throw new ArgumentNullException(nameof(queryOptions));
-            }
-
-            var settings = GetSettings(queryOptions);
-            return QueryInternalAsync(question, settings, settings.ShuffleNameServers(), cancellationToken: cancellationToken);
-        }
-
-        /// <inheritdoc/>
-        public IDnsQueryResponse QueryServer(IReadOnlyCollection<IPAddress> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN)
-            => QueryServer(NameServer.Convert(servers), new DnsQuestion(query, queryType, queryClass));
-
-        /// <inheritdoc/>
-        public IDnsQueryResponse QueryServer(IReadOnlyCollection<IPEndPoint> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN)
-            => QueryServer(NameServer.Convert(servers), new DnsQuestion(query, queryType, queryClass));
-
-        /// <inheritdoc/>
-        public IDnsQueryResponse QueryServer(IReadOnlyCollection<NameServer> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN)
-            => QueryServer(servers, new DnsQuestion(query, queryType, queryClass));
-
-        /// <inheritdoc/>
-        public IDnsQueryResponse QueryServer(IReadOnlyCollection<NameServer> servers, DnsQuestion question)
-        {
-            if (servers == null)
-            {
-                throw new ArgumentNullException(nameof(servers));
-            }
-
-            if (servers.Count == 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name servers must not be empty.");
-            }
-
-            servers = NameServer.ValidateNameServers(servers, _logger);
-            return QueryInternal(question, Settings, servers);
-        }
-
-        /// <inheritdoc/>
-        public IDnsQueryResponse QueryServer(IReadOnlyCollection<NameServer> servers, DnsQuestion question, DnsQueryOptions queryOptions)
-        {
-            if (servers == null)
-            {
-                throw new ArgumentNullException(nameof(servers));
-            }
-
-            if (servers.Count == 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name servers must not be empty.");
-            }
-
-            servers = NameServer.ValidateNameServers(servers, _logger);
-            return QueryInternal(question, queryOptions, servers);
-        }
-
-        /// <inheritdoc/>
-        public Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<IPAddress> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default)
-            => QueryServerAsync(NameServer.Convert(servers), new DnsQuestion(query, queryType, queryClass), cancellationToken);
-
-        /// <inheritdoc/>
-        public Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<IPEndPoint> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default)
-            => QueryServerAsync(NameServer.Convert(servers), new DnsQuestion(query, queryType, queryClass), cancellationToken);
-
-        /// <inheritdoc/>
-        public Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<NameServer> servers, string query, QueryType queryType, QueryClass queryClass = QueryClass.IN, CancellationToken cancellationToken = default)
-            => QueryServerAsync(servers, new DnsQuestion(query, queryType, queryClass), cancellationToken);
-
-        /// <inheritdoc/>
-        public Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<NameServer> servers, DnsQuestion question, CancellationToken cancellationToken = default)
-        {
-            if (servers == null)
-            {
-                throw new ArgumentNullException(nameof(servers));
-            }
-
-            if (servers.Count == 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name servers must not be empty.");
-            }
-
-            servers = NameServer.ValidateNameServers(servers, _logger);
-            return QueryInternalAsync(question, Settings, servers, cancellationToken);
-        }
-
-        /// <inheritdoc/>
-        public Task<IDnsQueryResponse> QueryServerAsync(IReadOnlyCollection<NameServer> servers, DnsQuestion question, DnsQueryOptions queryOptions, CancellationToken cancellationToken = default)
-        {
-            if (servers == null)
-            {
-                throw new ArgumentNullException(nameof(servers));
-            }
-
-            if (servers.Count == 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name servers must not be empty.");
-            }
-
-            servers = NameServer.ValidateNameServers(servers, _logger);
-            return QueryInternalAsync(question, queryOptions, servers, cancellationToken);
-        }
-
-        /// <inheritdoc/>
-        public IDnsQueryResponse QueryServerReverse(IReadOnlyCollection<IPAddress> servers, IPAddress ipAddress)
-            => QueryServerReverse(NameServer.Convert(servers), ipAddress);
-
-        /// <inheritdoc/>
-        public IDnsQueryResponse QueryServerReverse(IReadOnlyCollection<IPEndPoint> servers, IPAddress ipAddress)
-            => QueryServerReverse(NameServer.Convert(servers), ipAddress);
-
-        /// <inheritdoc/>
-        public IDnsQueryResponse QueryServerReverse(IReadOnlyCollection<NameServer> servers, IPAddress ipAddress)
-            => QueryServer(servers, GetReverseQuestion(ipAddress));
-
-        /// <inheritdoc/>
-        public IDnsQueryResponse QueryServerReverse(IReadOnlyCollection<NameServer> servers, IPAddress ipAddress, DnsQueryOptions queryOptions)
-            => QueryServer(servers, GetReverseQuestion(ipAddress), queryOptions);
-
-        /// <inheritdoc/>
-        public Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyCollection<IPAddress> servers, IPAddress ipAddress, CancellationToken cancellationToken = default)
-            => QueryServerReverseAsync(NameServer.Convert(servers), ipAddress, cancellationToken: cancellationToken);
-
-        /// <inheritdoc/>
-        public Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyCollection<IPEndPoint> servers, IPAddress ipAddress, CancellationToken cancellationToken = default)
-            => QueryServerReverseAsync(NameServer.Convert(servers), ipAddress, cancellationToken: cancellationToken);
-
-        /// <inheritdoc/>
-        public Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyCollection<NameServer> servers, IPAddress ipAddress, CancellationToken cancellationToken = default)
-            => QueryServerAsync(servers, GetReverseQuestion(ipAddress), cancellationToken);
-
-        /// <inheritdoc/>
-        public Task<IDnsQueryResponse> QueryServerReverseAsync(IReadOnlyCollection<NameServer> servers, IPAddress ipAddress, DnsQueryOptions queryOptions, CancellationToken cancellationToken = default)
-            => QueryServerAsync(servers, GetReverseQuestion(ipAddress), queryOptions, cancellationToken);
-
-        // For unit tests.
-        internal DnsQueryAndServerSettings GetSettings(DnsQueryAndServerOptions queryOptions = null)
-        {
-            // Re-evaluating resolved nameservers here, seems the best place.
-            if (_originalOptions.AutoResolveNameServers)
-            {
-                _skipper?.MaybeDoWork();
-            }
-
-            if (queryOptions == null)
-            {
-                return Settings;
-            }
-
-            if (queryOptions.NameServers == null || queryOptions.NameServers.Count == 0)
-            {
-                // fallback to already configured nameservers in case none are specified.
-                return new DnsQueryAndServerSettings(queryOptions, Settings.NameServers);
-            }
-
-            return queryOptions;
-        }
-
-        private IDnsQueryResponse QueryInternal(DnsQuestion question, DnsQuerySettings queryOptions, IReadOnlyCollection<NameServer> servers)
-        {
-            if (servers == null)
-            {
-                throw new ArgumentNullException(nameof(servers));
-            }
-            if (question == null)
-            {
-                throw new ArgumentNullException(nameof(question));
-            }
-            if (queryOptions == null)
-            {
-                throw new ArgumentNullException(nameof(queryOptions));
-            }
-            if (servers.Count == 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name servers must not be empty.");
+                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name nameServers must not be empty.");
             }
 
             var head = new DnsRequestHeader(queryOptions.Recursion, DnsOpCode.Query);
@@ -552,7 +342,7 @@ namespace DnsClient
                 _logger.LogDebug(LogEventStartQuery, "Begin query [{0}] via {1} => {2} on [{3}].", head, handler.Type, question, string.Join(", ", servers));
             }
 
-            var result = ResolveQuery(servers.ToList(), queryOptions, handler, request, audit);
+            var result = ResolveQuery(servers, queryOptions, handler, request, audit);
             if (!(result is TruncatedQueryResponse))
             {
                 return result;
@@ -567,7 +357,7 @@ namespace DnsClient
             }
 
             request.Header.RefreshId();
-            var tcpResult = ResolveQuery(servers.ToList(), queryOptions, _tcpFallbackHandler, request, audit);
+            var tcpResult = ResolveQuery(servers, queryOptions, _tcpFallbackHandler, request, audit);
             if (tcpResult is TruncatedQueryResponse)
             {
                 throw new DnsResponseException("Unexpected truncated result from TCP response.")
@@ -579,25 +369,8 @@ namespace DnsClient
             return tcpResult;
         }
 
-        private async Task<IDnsQueryResponse> QueryInternalAsync(DnsQuestion question, DnsQuerySettings queryOptions, IReadOnlyCollection<NameServer> servers, CancellationToken cancellationToken = default)
+        private async Task<IDnsQueryResponse> QueryInternalAsync(DnsQuestion question, DnsQueryOptions queryOptions, IEnumerable<NameServer> servers, CancellationToken cancellationToken = default)
         {
-            if (servers == null)
-            {
-                throw new ArgumentNullException(nameof(servers));
-            }
-            if (question == null)
-            {
-                throw new ArgumentNullException(nameof(question));
-            }
-            if (queryOptions == null)
-            {
-                throw new ArgumentNullException(nameof(queryOptions));
-            }
-            if (servers.Count == 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(servers), "List of configured name servers must not be empty.");
-            }
-
             var head = new DnsRequestHeader(queryOptions.Recursion, DnsOpCode.Query);
             var request = new DnsRequestMessage(head, question, queryOptions);
             var handler = queryOptions.UseTcpOnly ? _tcpFallbackHandler : _messageHandler;
@@ -608,7 +381,7 @@ namespace DnsClient
                 _logger.LogDebug(LogEventStartQuery, "Begin query [{0}] via {1} => {2} on [{3}].", head, handler.Type, question, string.Join(", ", servers));
             }
 
-            var result = await ResolveQueryAsync(servers.ToList(), queryOptions, handler, request, audit, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var result = await ResolveQueryAsync(servers, queryOptions, handler, request, audit, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (!(result is TruncatedQueryResponse))
             {
                 return result;
@@ -623,7 +396,7 @@ namespace DnsClient
             }
 
             request.Header.RefreshId();
-            var tcpResult = await ResolveQueryAsync(servers.ToList(), queryOptions, _tcpFallbackHandler, request, audit, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var tcpResult = await ResolveQueryAsync(servers, queryOptions, _tcpFallbackHandler, request, audit, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (tcpResult is TruncatedQueryResponse)
             {
                 throw new DnsResponseException("Unexpected truncated result from TCP response.")
@@ -636,25 +409,17 @@ namespace DnsClient
         }
 
         private IDnsQueryResponse ResolveQuery(
-            IReadOnlyList<NameServer> servers,
-            DnsQuerySettings settings,
+            IEnumerable<NameServer> servers,
+            DnsQueryOptions settings,
             DnsMessageHandler handler,
             DnsRequestMessage request,
-            LookupClientAudit audit = null)
+            LookupClientAudit? audit = null)
         {
-            if (request == null)
+            var nameServers = ListUtils.GetOrCreateList(servers);
+            for (var serverIndex = 0; serverIndex < nameServers.Count; serverIndex++)
             {
-                throw new ArgumentNullException(nameof(request));
-            }
-            if (handler == null)
-            {
-                throw new ArgumentNullException(nameof(handler));
-            }
-
-            for (var serverIndex = 0; serverIndex < servers.Count; serverIndex++)
-            {
-                var serverInfo = servers[serverIndex];
-                var isLastServer = serverIndex >= servers.Count - 1;
+                var serverInfo = nameServers[serverIndex];
+                var isLastServer = serverIndex >= nameServers.Count - 1;
 
                 if (serverIndex > 0)
                 {
@@ -716,7 +481,7 @@ namespace DnsClient
                             settings,
                             serverInfo,
                             handler.Type,
-                            servers.Count,
+                            nameServers.Count,
                             isLastServer,
                             out var retryQueryHint);
 
@@ -873,33 +638,25 @@ namespace DnsClient
             } // next server
 
             // 1.3.0: With the error handling, this should never be reached.
-            throw new DnsResponseException(DnsResponseCode.ConnectionTimeout, $"No connection could be established to any of the following name servers: {string.Join(", ", servers)}.")
+            throw new DnsResponseException(DnsResponseCode.ConnectionTimeout, $"No connection could be established to any of the following name nameServers: {string.Join(", ", nameServers)}.")
             {
                 AuditTrail = audit?.Build()
             };
         }
 
         private async Task<IDnsQueryResponse> ResolveQueryAsync(
-            IReadOnlyList<NameServer> servers,
-            DnsQuerySettings settings,
+            IEnumerable<NameServer> servers,
+            DnsQueryOptions settings,
             DnsMessageHandler handler,
             DnsRequestMessage request,
             LookupClientAudit audit = null,
             CancellationToken cancellationToken = default)
         {
-            if (handler == null)
+            var nameServers = ListUtils.GetOrCreateList(servers);
+            for (var serverIndex = 0; serverIndex < nameServers.Count; serverIndex++)
             {
-                throw new ArgumentNullException(nameof(handler));
-            }
-            if (request == null)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
-            for (var serverIndex = 0; serverIndex < servers.Count; serverIndex++)
-            {
-                var serverInfo = servers[serverIndex];
-                var isLastServer = serverIndex >= servers.Count - 1;
+                var serverInfo = nameServers[serverIndex];
+                var isLastServer = serverIndex >= nameServers.Count - 1;
 
                 if (serverIndex > 0)
                 {
@@ -991,7 +748,7 @@ namespace DnsClient
                             settings,
                             serverInfo,
                             handler.Type,
-                            servers.Count,
+                            nameServers.Count,
                             isLastServer,
                             out var retryQueryHint);
 
@@ -1019,7 +776,7 @@ namespace DnsClient
 
                         if (settings.UseCache)
                         {
-                            Cache.Add(cacheKey, lastQueryResponse);
+                            this.Cache.Add(cacheKey, lastQueryResponse);
                         }
 
                         return lastQueryResponse;
@@ -1081,7 +838,7 @@ namespace DnsClient
                         // If its the last server, return.
                         if (settings.UseCache && settings.CacheFailedResults)
                         {
-                            Cache.Add(cacheKey, lastQueryResponse, true);
+                            this.Cache.Add(cacheKey, lastQueryResponse, true);
                         }
 
                         return lastQueryResponse;
@@ -1128,7 +885,7 @@ namespace DnsClient
                     {
                         audit?.AuditException(ex);
 
-                        var handle = HandleUnhandledException(ex, request, serverInfo, handler.Type, isLastServer);
+                        var handle = this.HandleUnhandledException(ex, request, serverInfo, handler.Type, isLastServer);
 
                         if (handle == HandleError.RetryNextServer)
                         {
@@ -1151,7 +908,7 @@ namespace DnsClient
             } // next server
 
             // 1.3.0: With the error handling, this should never be reached.
-            throw new DnsResponseException(DnsResponseCode.ConnectionTimeout, $"No connection could be established to any of the following name servers: {string.Join(", ", servers)}.")
+            throw new DnsResponseException(DnsResponseCode.ConnectionTimeout, $"No connection could be established to any of the following name nameServers: {string.Join(", ", nameServers)}.")
             {
                 AuditTrail = audit?.Build()
             };
@@ -1159,7 +916,7 @@ namespace DnsClient
 
         private IDnsQueryResponse QueryCache(
             DnsQuestion question,
-            DnsQuerySettings settings)
+            DnsQueryOptions settings)
         {
             if (question == null)
             {
@@ -1190,7 +947,7 @@ namespace DnsClient
             ReturnResponse
         }
 
-        private HandleError HandleDnsResponseException(DnsResponseException ex, DnsRequestMessage request, DnsQuerySettings settings, NameServer nameServer, DnsMessageHandleType handleType, bool isLastServer, bool isLastTry, int currentTry)
+        private HandleError HandleDnsResponseException(DnsResponseException ex, DnsRequestMessage request, DnsQueryOptions settings, NameServer nameServer, DnsMessageHandleType handleType, bool isLastServer, bool isLastTry, int currentTry)
         {
             var handle = isLastServer ? settings.ThrowDnsErrors ? HandleError.Throw : HandleError.ReturnResponse : HandleError.RetryNextServer;
 
@@ -1234,23 +991,23 @@ namespace DnsClient
 
                 if (handle == HandleError.RetryCurrentServer)
                 {
-                    _logger.LogInformation(eventId, message, request.Header.Id, handleType, request.Question, nameServer, ex.DnsError, currentTry + 1, settings.Retries + 1);
+                    this._logger.LogInformation(eventId, message, request.Header.Id, handleType, request.Question, nameServer, ex.DnsError, currentTry + 1, settings.Retries + 1);
                 }
                 else
                 {
-                    _logger.LogInformation(eventId, message, request.Header.Id, handleType, request.Question, nameServer, ex.DnsError);
+                    this._logger.LogInformation(eventId, message, request.Header.Id, handleType, request.Question, nameServer, ex.DnsError);
                 }
             }
 
             return handle;
         }
 
-        private HandleError HandleDnsXidMismatchException(DnsXidMismatchException ex, DnsRequestMessage request, DnsQuerySettings settings, DnsMessageHandleType handleType, bool isLastServer, bool isLastTry, int currentTry)
+        private HandleError HandleDnsXidMismatchException(DnsXidMismatchException ex, DnsRequestMessage request, DnsQueryOptions settings, DnsMessageHandleType handleType, bool isLastServer, bool isLastTry, int currentTry)
         {
             // No more retries
             if (isLastServer && isLastTry)
             {
-                _logger.LogError(
+                this._logger.LogError(
                     LogEventQueryFail,
                     ex,
                     "Query {0} via {1} => {2} xid mismatch {3}. Throwing the error.",
@@ -1265,7 +1022,7 @@ namespace DnsClient
             // Last try on the current server, try the nextServer
             if (isLastTry)
             {
-                _logger.LogError(
+                this._logger.LogError(
                     LogEventQueryRetryErrorNextServer,
                     ex,
                     "Query {0} via {1} => {2} xid mismatch {3}. Trying next server.",
@@ -1278,7 +1035,7 @@ namespace DnsClient
             }
 
             // Next try
-            _logger.LogWarning(
+            this._logger.LogWarning(
                 LogEventQueryRetryErrorNextServer,
                 ex,
                 "Query {0} via {1} => {2} xid mismatch {3}. Re-trying {4}/{5}...",
@@ -1301,8 +1058,8 @@ namespace DnsClient
                 && (ex.ResponseData.Length <= DnsQueryOptions.MinimumBufferSize || ex.ReadLength + ex.Index > ex.ResponseData.Length))
             {
                 // lets assume the response was truncated and retry with TCP.
-                // (Not retrying other servers as it is very unlikely they would provide better results on this network)
-                _logger.LogError(
+                // (Not retrying other nameServers as it is very unlikely they would provide better results on this network)
+                this._logger.LogError(
                     LogEventQueryBadTruncation,
                     ex,
                     "Query {0} via {1} => {2} error parsing the response. The response seems to be truncated without TC flag set! Re-trying via TCP anyways.",
@@ -1316,7 +1073,7 @@ namespace DnsClient
 
             if (isLastServer)
             {
-                _logger.LogError(
+                this._logger.LogError(
                     LogEventQueryFail,
                     ex,
                     "Query {0} via {1} => {2} error parsing the response. Throwing the error.",
@@ -1328,7 +1085,7 @@ namespace DnsClient
             }
 
             // Otherwise, lets continue at least with the next server
-            _logger.LogWarning(
+            this._logger.LogWarning(
                 LogEventQueryRetryErrorNextServer,
                 ex,
                 "Query {0} via {1} => {2} error parsing the response. Trying next server.",
@@ -1339,13 +1096,13 @@ namespace DnsClient
             return HandleError.RetryNextServer;
         }
 
-        private HandleError HandleTimeoutException(Exception ex, DnsRequestMessage request, DnsQuerySettings settings, NameServer nameServer, DnsMessageHandleType handleType, bool isLastServer, bool isLastTry, int currentTry)
+        private HandleError HandleTimeoutException(Exception ex, DnsRequestMessage request, DnsQueryOptions settings, NameServer nameServer, DnsMessageHandleType handleType, bool isLastServer, bool isLastTry, int currentTry)
         {
             if (isLastTry && isLastServer)
             {
-                if (_logger.IsEnabled(LogLevel.Information))
+                if (this._logger.IsEnabled(LogLevel.Information))
                 {
-                    _logger.LogInformation(
+                    this._logger.LogInformation(
                         LogEventQueryFail,
                         ex,
                         "Query {0} via {1} => {2} on {3} timed out or is a transient error. Throwing the error.",
@@ -1359,9 +1116,9 @@ namespace DnsClient
             }
             else if (isLastTry)
             {
-                if (_logger.IsEnabled(LogLevel.Information))
+                if (this._logger.IsEnabled(LogLevel.Information))
                 {
-                    _logger.LogInformation(
+                    this._logger.LogInformation(
                         LogEventQueryRetryErrorNextServer,
                         ex,
                         "Query {0} via {1} => {2} on {3} timed out or is a transient error. Trying next server",
@@ -1374,9 +1131,9 @@ namespace DnsClient
                 return HandleError.RetryNextServer;
             }
 
-            if (_logger.IsEnabled(LogLevel.Information))
+            if (this._logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation(
+                this._logger.LogInformation(
                     LogEventQueryRetryErrorSameServer,
                     ex,
                     "Query {0} via {1} => {2} on {3} timed out or is a transient error. Re-trying {4}/{5}...",
@@ -1393,9 +1150,9 @@ namespace DnsClient
 
         private HandleError HandleUnhandledException(Exception ex, DnsRequestMessage request, NameServer nameServer, DnsMessageHandleType handleType, bool isLastServer)
         {
-            if (_logger.IsEnabled(LogLevel.Warning))
+            if (this._logger.IsEnabled(LogLevel.Warning))
             {
-                _logger.LogWarning(
+                this._logger.LogWarning(
                     isLastServer ? LogEventQueryFail : LogEventQueryRetryErrorNextServer,
                     ex,
                     "Query {0} via {1} => {2} on {3} failed with an error."
@@ -1418,7 +1175,7 @@ namespace DnsClient
             LookupClientAudit audit,
             DnsRequestMessage request,
             DnsResponseMessage response,
-            DnsQuerySettings settings,
+            DnsQueryOptions settings,
             NameServer nameServer,
             DnsMessageHandleType handleType,
             int serverCount,
@@ -1446,7 +1203,7 @@ namespace DnsClient
 
             if (request.Header.Id != response.Header.Id)
             {
-                _logger.LogWarning(
+                this._logger.LogWarning(
                     "Request header id {0} does not match response header {1}. This might be due to some non-standard configuration in your network.",
                     request.Header.Id,
                     response.Header.Id);
@@ -1474,12 +1231,12 @@ namespace DnsClient
                 }
             }
 
-            HandleOptRecords(settings, audit, nameServer, response);
+            this.HandleOptRecords(settings, audit, nameServer, response);
 
             var result = response.AsQueryResponse(nameServer, settings);
 
             // Set retry next server hint in case the question hasn't been answered.
-            // Only if there are more servers and the response doesn't have an error as that gets retried already per configuration.
+            // Only if there are more nameServers and the response doesn't have an error as that gets retried already per configuration.
             // Also, only do this if the setting is enabled.
             if (!result.HasError && !isLastServer && settings.ContinueOnEmptyResponse)
             {
@@ -1516,17 +1273,17 @@ namespace DnsClient
             return result;
         }
 
-        private bool TryGetCachedResult(string cacheKey, DnsRequestMessage request, DnsQuerySettings settings, out IDnsQueryResponse response)
+        private bool TryGetCachedResult(string cacheKey, DnsRequestMessage request, DnsQueryOptions settings, [NotNullWhen(true)] out IDnsQueryResponse? response)
         {
             response = null;
             if (settings.UseCache)
             {
-                response = Cache.Get(cacheKey);
+                response = this.Cache.Get(cacheKey);
                 if (response != null)
                 {
-                    if (_logger.IsEnabled(LogLevel.Debug))
+                    if (this._logger.IsEnabled(LogLevel.Debug))
                     {
-                        _logger.LogDebug(LogEventQueryCachedResult, "Got cached result for query {0} => {1}.", request.Header.Id, request.Question);
+                        this._logger.LogDebug(LogEventQueryCachedResult, "Got cached result for query {0} => {1}.", request.Header.Id, request.Question);
                     }
 
                     if (settings.EnableAuditTrail)
@@ -1535,15 +1292,13 @@ namespace DnsClient
                         cacheAudit.AuditCachedItem(response);
                         cacheAudit.Build(response);
                     }
-
                     return true;
                 }
             }
-
             return false;
         }
 
-        private void HandleOptRecords(DnsQuerySettings settings, LookupClientAudit audit, NameServer serverInfo, DnsResponseMessage response)
+        private void HandleOptRecords(DnsQueryOptions settings, LookupClientAudit audit, NameServer serverInfo, DnsResponseMessage response)
         {
             if (settings.UseExtendedDns)
             {
@@ -1551,9 +1306,9 @@ namespace DnsClient
 
                 if (record == null)
                 {
-                    if (_logger.IsEnabled(LogLevel.Information))
+                    if (this._logger.IsEnabled(LogLevel.Information))
                     {
-                        _logger.LogInformation(LogEventResponseMissingOpt, "Response {0} => {1} is missing the requested OPT record.", response.Header.Id, response.Questions.FirstOrDefault());
+                        this._logger.LogInformation(LogEventResponseMissingOpt, "Response {0} => {1} is missing the requested OPT record.", response.Header.Id, response.Questions.FirstOrDefault());
                     }
                 }
                 else if (record is OptRecord optRecord)
@@ -1564,9 +1319,9 @@ namespace DnsClient
 
                     audit?.AuditEdnsOpt(optRecord.UdpSize, optRecord.Version, optRecord.IsDnsSecOk, optRecord.ResponseCodeEx);
 
-                    if (_logger.IsEnabled(LogLevel.Debug))
+                    if (this._logger.IsEnabled(LogLevel.Debug))
                     {
-                        _logger.LogDebug(
+                        this._logger.LogDebug(
                             LogEventResponseOpt,
                             "Response {0} => {1} opt record sets buffer of {2} to {3}.",
                             response.Header.Id,
@@ -1585,16 +1340,11 @@ namespace DnsClient
         /// <returns>A <see cref="DnsQuestion"/> with the proper arpa domain query for the given address.</returns>
         public static DnsQuestion GetReverseQuestion(IPAddress ipAddress)
         {
-            if (ipAddress == null)
-            {
-                throw new ArgumentNullException(nameof(ipAddress));
-            }
-
             var arpa = ipAddress.GetArpaName();
             return new DnsQuestion(arpa, QueryType.PTR, QueryClass.IN);
         }
 
-        private class SkipWorker
+        private sealed class SkipWorker
         {
             private readonly Action _worker;
             private readonly int _skipFor = 5000;
@@ -1602,294 +1352,25 @@ namespace DnsClient
 
             public SkipWorker(Action worker, int skip = 5000)
             {
-                _worker = worker ?? throw new ArgumentNullException(nameof(worker));
+                ArgumentNullException.ThrowIfNull(worker);
+                ArgumentOutOfRangeException.ThrowIfNegative(skip);
 
-                if (skip <= 1)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(skip));
-                }
-
-                _skipFor = skip;
+                this._worker = worker ?? throw new ArgumentNullException(nameof(worker));
+                this._skipFor = skip;
 
                 // Skip first run
-                _lastRun = (Environment.TickCount & int.MaxValue);
+                this._lastRun = (Environment.TickCount & int.MaxValue);
             }
 
             public void MaybeDoWork()
             {
-                if (_lastRun + _skipFor >= (Environment.TickCount & int.MaxValue))
+                var lastRun = Volatile.Read(ref this._lastRun);
+                if (lastRun + this._skipFor >= (Environment.TickCount & int.MaxValue)) return;
+                if (Interlocked.CompareExchange(ref this._lastRun, (Environment.TickCount & int.MaxValue), lastRun) == lastRun)
                 {
-                    return;
-                }
-
-                var oldValue = _lastRun;
-                if (Interlocked.CompareExchange(ref _lastRun, (Environment.TickCount & int.MaxValue), oldValue) == oldValue)
-                {
-                    _worker();
+                    this._worker();
                 }
             }
-        }
-    }
-
-    internal class LookupClientAudit
-    {
-        private const int PrintOffset = -32;
-        private readonly StringBuilder _auditWriter = new StringBuilder();
-        private Stopwatch _swatch;
-
-        public DnsQuerySettings Settings { get; }
-
-        public LookupClientAudit(DnsQuerySettings settings)
-        {
-            Settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        }
-
-        public void AuditCachedItem(IDnsQueryResponse response)
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-            StartTimer();
-            _auditWriter.AppendLine($"; (cached result)");
-            AuditResponseHeader(response.Header);
-
-            AuditOptPseudo();
-
-            var record = response.Additionals.OfRecordType(Protocol.ResourceRecordType.OPT).FirstOrDefault();
-            if (record != null && record is OptRecord optRecord)
-            {
-                AuditEdnsOpt(optRecord.UdpSize, optRecord.Version, optRecord.IsDnsSecOk, optRecord.ResponseCodeEx);
-            }
-
-            AuditEnd(response, response.NameServer);
-        }
-
-        public void StartTimer()
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-            _swatch = Stopwatch.StartNew();
-            _swatch.Restart();
-        }
-
-        public void AuditResolveServers(int count)
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-#if NET6_0_OR_GREATER
-            _auditWriter.AppendLine(CultureInfo.InvariantCulture, $"; ({count} server found)");
-#else
-            _auditWriter.AppendLine($"; ({count} server found)");
-#endif
-        }
-
-        public string Build(IDnsQueryResponse response = null)
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return string.Empty;
-            }
-
-            var audit = _auditWriter.ToString();
-            if (response != null)
-            {
-                DnsQueryResponse.SetAuditTrail(response, audit);
-            }
-
-            return audit;
-        }
-
-        public void AuditTruncatedRetryTcp()
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-            _auditWriter.AppendLine(";; Truncated, retrying in TCP mode.");
-            _auditWriter.AppendLine();
-        }
-
-        public void AuditResponseError(DnsHeaderResponseCode responseCode)
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-#if NET6_0_OR_GREATER
-            _auditWriter.AppendLine(CultureInfo.InvariantCulture, $";; ERROR: {DnsResponseCodeText.GetErrorText((DnsResponseCode)responseCode)}");
-#else
-            _auditWriter.AppendLine($";; ERROR: {DnsResponseCodeText.GetErrorText((DnsResponseCode)responseCode)}");
-#endif
-        }
-
-        public void AuditOptPseudo()
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-            _auditWriter.AppendLine(";; OPT PSEUDOSECTION:");
-        }
-
-        public void AuditResponseHeader(DnsResponseHeader header)
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-            _auditWriter.AppendLine(";; Got answer:");
-            _auditWriter.AppendLine(header.ToString());
-            if (header.RecursionDesired && !header.RecursionAvailable)
-            {
-                _auditWriter.AppendLine(";; WARNING: recursion requested but not available");
-            }
-            _auditWriter.AppendLine();
-        }
-
-        public void AuditEdnsOpt(short udpSize, byte version, bool doFlag, DnsResponseCode responseCode)
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-#if NET6_0_OR_GREATER
-            _auditWriter.AppendLine(CultureInfo.InvariantCulture, $"; EDNS: version: {version}, flags:{(doFlag ? " do" : string.Empty)}; UDP: {udpSize}; code: {responseCode}");
-#else
-            _auditWriter.AppendLine($"; EDNS: version: {version}, flags:{(doFlag ? " do" : string.Empty)}; UDP: {udpSize}; code: {responseCode}");
-#endif
-        }
-
-        public void AuditEnd(IDnsQueryResponse queryResponse, NameServer nameServer)
-        {
-            if (nameServer is null)
-            {
-                throw new ArgumentNullException(nameof(nameServer));
-            }
-
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-            var elapsed = _swatch.ElapsedMilliseconds;
-
-            // TODO: find better way to print the actual TTL of cached values
-            if (queryResponse != null)
-            {
-                if (queryResponse.Questions.Count > 0)
-                {
-                    _auditWriter.AppendLine(";; QUESTION SECTION:");
-                    foreach (var question in queryResponse.Questions)
-                    {
-                        _auditWriter.AppendLine(question.ToString(PrintOffset));
-                    }
-                    _auditWriter.AppendLine();
-                }
-
-                if (queryResponse.Answers.Count > 0)
-                {
-                    _auditWriter.AppendLine(";; ANSWER SECTION:");
-                    foreach (var answer in queryResponse.Answers)
-                    {
-                        _auditWriter.AppendLine(answer.ToString(PrintOffset));
-                    }
-                    _auditWriter.AppendLine();
-                }
-
-                if (queryResponse.Authorities.Count > 0)
-                {
-                    _auditWriter.AppendLine(";; AUTHORITIES SECTION:");
-                    foreach (var auth in queryResponse.Authorities)
-                    {
-                        _auditWriter.AppendLine(auth.ToString(PrintOffset));
-                    }
-                    _auditWriter.AppendLine();
-                }
-
-                var additionals = queryResponse.Additionals.Where(p => !(p is OptRecord)).ToArray();
-                if (additionals.Length > 0)
-                {
-                    _auditWriter.AppendLine(";; ADDITIONALS SECTION:");
-                    foreach (var additional in additionals)
-                    {
-                        _auditWriter.AppendLine(additional.ToString(PrintOffset));
-                    }
-                    _auditWriter.AppendLine();
-                }
-            }
-
-#if NET6_0_OR_GREATER
-            _auditWriter.AppendLine(CultureInfo.InvariantCulture, $";; Query time: {elapsed} msec");
-            _auditWriter.AppendLine(CultureInfo.InvariantCulture, $";; SERVER: {nameServer.Address}#{nameServer.Port}");
-            _auditWriter.AppendLine(CultureInfo.InvariantCulture, $";; WHEN: {DateTime.UtcNow.ToString("ddd MMM dd HH:mm:ss K yyyy", CultureInfo.InvariantCulture)}");
-            _auditWriter.AppendLine(CultureInfo.InvariantCulture, $";; MSG SIZE  rcvd: {queryResponse.MessageSize}");
-#else
-            _auditWriter.AppendLine($";; Query time: {elapsed} msec");
-            _auditWriter.AppendLine($";; SERVER: {nameServer.Address}#{nameServer.Port}");
-            _auditWriter.AppendLine($";; WHEN: {DateTime.UtcNow.ToString("ddd MMM dd HH:mm:ss K yyyy", CultureInfo.InvariantCulture)}");
-            _auditWriter.AppendLine($";; MSG SIZE  rcvd: {queryResponse.MessageSize}");
-#endif
-        }
-
-        public void AuditException(Exception ex)
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-            if (ex is DnsResponseException dnsEx)
-            {
-#if NET6_0_OR_GREATER
-                _auditWriter.AppendLine(CultureInfo.InvariantCulture, $";; Error: {DnsResponseCodeText.GetErrorText(dnsEx.Code)} {dnsEx.InnerException?.Message ?? dnsEx.Message}");
-#else
-                _auditWriter.AppendLine($";; Error: {DnsResponseCodeText.GetErrorText(dnsEx.Code)} {dnsEx.InnerException?.Message ?? dnsEx.Message}");
-#endif
-            }
-            else if (ex is AggregateException aggEx)
-            {
-#if NET6_0_OR_GREATER
-                _auditWriter.AppendLine(CultureInfo.InvariantCulture, $";; Error: {aggEx.InnerException?.Message ?? aggEx.Message}");
-#else
-                _auditWriter.AppendLine($";; Error: {aggEx.InnerException?.Message ?? aggEx.Message}");
-#endif
-            }
-            else
-            {
-#if NET6_0_OR_GREATER
-                _auditWriter.AppendLine(CultureInfo.InvariantCulture, $";; Error: {ex.Message}");
-#else
-                _auditWriter.AppendLine($";; Error: {ex.Message}");
-#endif
-            }
-
-            if (Debugger.IsAttached)
-            {
-                _auditWriter.AppendLine(ex.ToString());
-            }
-        }
-
-        public void AuditRetryNextServer()
-        {
-            if (!Settings.EnableAuditTrail)
-            {
-                return;
-            }
-
-            _auditWriter.AppendLine();
-            _auditWriter.AppendLine($"; Trying next server.");
         }
     }
 }
